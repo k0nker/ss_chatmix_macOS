@@ -192,13 +192,13 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         } else {
             for device in availableHIDDevices {
                 let title = "\(device.productName) (VID: \(String(format: "0x%04X", device.vendorID)) PID: \(String(format: "0x%04X", device.productID)))"
-                let item = NSMenuItem(title: title, action: #selector(selectChatMixDevice(_:)), keyEquivalent: "")
+                let item = NSMenuItem(title: title, action: #selector(selectChatMixDeviceFromMenu(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = device
                 
                 // Add checkmark if this is the current device
                 if device.vendorID == currentVendorID && device.productID == currentProductID {
-                    item.state = .on
+                    item.state = NSControl.StateValue.on
                 }
                 
                 submenu.addItem(item)
@@ -221,12 +221,12 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             submenu.addItem(noneItem)
         } else {
             for device in availableAudioDevices {
-                let item = NSMenuItem(title: device.name, action: #selector(selectGameDevice(_:)), keyEquivalent: "")
+                let item = NSMenuItem(title: device.name, action: #selector(selectGameDeviceFromMenu(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = device
                 
                 if device.uid == currentUID {
-                    item.state = .on
+                    item.state = NSControl.StateValue.on
                 }
                 
                 submenu.addItem(item)
@@ -249,12 +249,12 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             submenu.addItem(noneItem)
         } else {
             for device in availableAudioDevices {
-                let item = NSMenuItem(title: device.name, action: #selector(selectChatDevice(_:)), keyEquivalent: "")
+                let item = NSMenuItem(title: device.name, action: #selector(selectChatDeviceFromMenu(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = device
                 
                 if device.uid == currentUID {
-                    item.state = .on
+                    item.state = NSControl.StateValue.on
                 }
                 
                 submenu.addItem(item)
@@ -277,12 +277,12 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             submenu.addItem(noneItem)
         } else {
             for device in availableAudioDevices {
-                let item = NSMenuItem(title: device.name, action: #selector(selectOutputDevice(_:)), keyEquivalent: "")
+                let item = NSMenuItem(title: device.name, action: #selector(selectOutputDeviceFromMenu(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = device
                 
                 if device.uid == currentUID {
-                    item.state = .on
+                    item.state = NSControl.StateValue.on
                 }
                 
                 submenu.addItem(item)
@@ -421,22 +421,22 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
     
-    @objc func selectChatMixDevice(_ sender: NSMenuItem) {
+    @objc func selectChatMixDeviceFromMenu(_ sender: NSMenuItem) {
         guard let device = sender.representedObject as? ChatMixDevice else { return }
         selectChatMixDevice(device)
     }
     
-    @objc func selectGameDevice(_ sender: NSMenuItem) {
+    @objc func selectGameDeviceFromMenu(_ sender: NSMenuItem) {
         guard let device = sender.representedObject as? AudioDeviceInfo else { return }
         selectGameDevice(device)
     }
     
-    @objc func selectChatDevice(_ sender: NSMenuItem) {
+    @objc func selectChatDeviceFromMenu(_ sender: NSMenuItem) {
         guard let device = sender.representedObject as? AudioDeviceInfo else { return }
         selectChatDevice(device)
     }
     
-    @objc func selectOutputDevice(_ sender: NSMenuItem) {
+    @objc func selectOutputDeviceFromMenu(_ sender: NSMenuItem) {
         guard let device = sender.representedObject as? AudioDeviceInfo else { return }
         selectOutputDevice(device)
     }
