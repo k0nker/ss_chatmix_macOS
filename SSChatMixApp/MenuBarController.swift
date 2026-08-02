@@ -109,12 +109,31 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             selectedChatMixDevice = availableChatMixDevices.first {
                 $0.vendorID == vendorID && $0.productID == productID
             }
+            if selectedChatMixDevice == nil {
+                print("⚠️ ChatMix device not found in available list: VID=\(String(format: "0x%04X", vendorID)) PID=\(String(format: "0x%04X", productID))")
+            }
         }
         
         // Find selected audio devices
         selectedGameDevice = availableAudioDevices.first { $0.uid == config.audioDevices.game.uid }
+        if selectedGameDevice == nil {
+            print("⚠️ Game device not found: \(config.audioDevices.game.uid)")
+            print("   Available devices: \(availableAudioDevices.map { $0.uid }.joined(separator: ", "))")
+        }
+        
         selectedChatDevice = availableAudioDevices.first { $0.uid == config.audioDevices.chat.uid }
-        selectedOutputDevice = availableAudioDevices.first { $0.uid == config.outputDeviceUid }
+        if selectedChatDevice == nil {
+            print("⚠️ Chat device not found: \(config.audioDevices.chat.uid)")
+        }
+        
+        if let outputUID = config.outputDeviceUid {
+            selectedOutputDevice = availableAudioDevices.first { $0.uid == outputUID }
+            if selectedOutputDevice == nil {
+                print("⚠️ Output device not found: \(outputUID)")
+            }
+        } else {
+            selectedOutputDevice = nil
+        }
     }
     
     func updateMenu() {
@@ -623,19 +642,44 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     }
     
     @objc func showSettings() {
-        // Always recreate window to show fresh data
-        let settingsView = SettingsView(controller: self)
-        let hostingController = NSHostingController(rootView: settingsView)
-        
-        let window = NSWindow(contentViewController: hostingController)
-        window.title = "SSChatMix Settings"
-        window.styleMask = [.titled, .closable, .resizable]
-        window.setContentSize(NSSize(width: 550, height: 600))
-        window.center()
-        
-        settingsWindow = window
-        settingsWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        // Refresh device lists and selections before showing window
+        // Do this on background thread to avoid blocking audio
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            // Load devices on background thread
+            let hidController = HIDController()
+            let hidDevices = hidController.listChatMixDevices()
+            
+            var audioDevices: [AudioDeviceInfo] = []
+            do {
+                audioDevices = try self.audioController.listOutputDevices()
+            } catch {
+                print("⚠️ Failed to load audio devices: \(error)")
+            }
+            
+            // Update on main thread (batched to minimize blocking)
+            DispatchQueue.main.async {
+                self.availableHIDDevices = hidDevices
+                self.availableChatMixDevices = hidDevices
+                self.availableAudioDevices = audioDevices
+                self.updateSelectedDevicesFromConfig()
+                
+                // Now show window with fresh data
+                let settingsView = SettingsView(controller: self)
+                let hostingController = NSHostingController(rootView: settingsView)
+                
+                let window = NSWindow(contentViewController: hostingController)
+                window.title = "SSChatMix Settings"
+                window.styleMask = [.titled, .closable, .resizable]
+                window.setContentSize(NSSize(width: 550, height: 600))
+                window.center()
+                
+                self.settingsWindow = window
+                self.settingsWindow?.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
     }
     
     @objc func showAbout() {

@@ -17,14 +17,7 @@ struct SettingsView: View {
             }
             
             Section {
-                Picker("ChatMix Device:", selection: Binding(
-                    get: { controller.selectedChatMixDevice ?? controller.availableChatMixDevices.first },
-                    set: { device in
-                        if let device = device {
-                            controller.selectChatMixDevice(device)
-                        }
-                    }
-                )) {
+                Picker("ChatMix Device:", selection: $controller.selectedChatMixDevice) {
                     Text("Select Device...").tag(nil as ChatMixDevice?)
                     ForEach(controller.availableChatMixDevices, id: \.self) { device in
                         Text("\(device.productName) (VID: \(String(format: "0x%04X", device.vendorID)) PID: \(String(format: "0x%04X", device.productID)))")
@@ -32,6 +25,11 @@ struct SettingsView: View {
                     }
                 }
                 .labelsHidden()
+                .onChange(of: controller.selectedChatMixDevice) { _, newDevice in
+                    if let device = newDevice {
+                        controller.selectChatMixDevice(device)
+                    }
+                }
                 
                 if let device = controller.selectedChatMixDevice {
                     HStack {
@@ -56,35 +54,31 @@ struct SettingsView: View {
             }
             
             Section {
-                Picker("Game Audio:", selection: Binding(
-                    get: { controller.selectedGameDevice ?? controller.availableAudioDevices.first },
-                    set: { device in
-                        if let device = device {
-                            controller.selectGameDevice(device)
-                        }
-                    }
-                )) {
+                Picker("Game Audio:", selection: $controller.selectedGameDevice) {
                     Text("Select Device...").tag(nil as AudioDeviceInfo?)
                     ForEach(controller.availableAudioDevices, id: \.self) { device in
                         Text(device.name).tag(device as AudioDeviceInfo?)
                     }
                 }
                 .labelsHidden()
+                .onChange(of: controller.selectedGameDevice) { _, newDevice in
+                    if let device = newDevice {
+                        controller.selectGameDevice(device)
+                    }
+                }
                 
-                Picker("Chat Audio:", selection: Binding(
-                    get: { controller.selectedChatDevice ?? controller.availableAudioDevices.first },
-                    set: { device in
-                        if let device = device {
-                            controller.selectChatDevice(device)
-                        }
-                    }
-                )) {
+                Picker("Chat Audio:", selection: $controller.selectedChatDevice) {
                     Text("Select Device...").tag(nil as AudioDeviceInfo?)
                     ForEach(controller.availableAudioDevices, id: \.self) { device in
                         Text(device.name).tag(device as AudioDeviceInfo?)
                     }
                 }
                 .labelsHidden()
+                .onChange(of: controller.selectedChatDevice) { _, newDevice in
+                    if let device = newDevice {
+                        controller.selectChatDevice(device)
+                    }
+                }
             } header: {
                 Text("Virtual Audio Devices")
             } footer: {
@@ -93,20 +87,18 @@ struct SettingsView: View {
             }
             
             Section {
-                Picker("Output Device:", selection: Binding(
-                    get: { controller.selectedOutputDevice ?? controller.availableAudioDevices.first },
-                    set: { device in
-                        if let device = device {
-                            controller.selectOutputDevice(device)
-                        }
-                    }
-                )) {
+                Picker("Output Device:", selection: $controller.selectedOutputDevice) {
                     Text("Select Device...").tag(nil as AudioDeviceInfo?)
                     ForEach(controller.availableAudioDevices, id: \.self) { device in
                         Text(device.name).tag(device as AudioDeviceInfo?)
                     }
                 }
                 .labelsHidden()
+                .onChange(of: controller.selectedOutputDevice) { _, newDevice in
+                    if let device = newDevice {
+                        controller.selectOutputDevice(device)
+                    }
+                }
             } header: {
                 Text("Physical Output")
             } footer: {
