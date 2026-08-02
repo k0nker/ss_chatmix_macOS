@@ -340,6 +340,28 @@ class MenuBarController: NSObject, NSApplicationDelegate {
             print("✅ ChatMix Controller started")
             print("   Move the dial to test...")
             
+        } catch AudioMonitorError.permissionDenied {
+            print("❌ Microphone permission denied")
+            statusMessage = "🎤 Microphone permission required"
+            isRunning = false
+            
+            // Show alert to user
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "Microphone Permission Required"
+                alert.informativeText = "SSChatMix needs microphone access to capture audio from virtual devices.\n\nPlease grant microphone permission in:\nSystem Settings > Privacy & Security > Microphone\n\nThen restart the app."
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "Open System Settings")
+                alert.addButton(withTitle: "OK")
+                
+                let response = alert.runModal()
+                if response == .alertFirstButtonReturn {
+                    // Open System Settings to Privacy > Microphone
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
         } catch {
             print("❌ Controller start failed: \(error)")
             statusMessage = "❌ Error: \(error.localizedDescription)"

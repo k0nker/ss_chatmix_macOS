@@ -22,6 +22,8 @@
     <string>13.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>SSChatMix needs microphone access to capture audio from virtual devices (BlackHole) for real-time mixing with the ChatMix dial.</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026. All rights reserved.</string>
     <key>NSPrincipalClass</key>

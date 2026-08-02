@@ -68,15 +68,37 @@ public class AudioMonitor {
         print("   Chat input: Device \(chatDeviceID)")
         print("   Output: Device \(outputDeviceID)")
         
-        // Check microphone permission
+        // Check and request microphone permission
         #if os(macOS)
         if #available(macOS 14.0, *) {
             let status = AVCaptureDevice.authorizationStatus(for: .audio)
             print("🎤 Microphone permission status: \(status.rawValue)")
-            if status != .authorized {
+            
+            if status == .notDetermined {
+                print("🎤 Requesting microphone permission...")
+                // Request permission - this will show system dialog
+                let semaphore = DispatchSemaphore(value: 0)
+                var granted = false
+                AVCaptureDevice.requestAccess(for: .audio) { result in
+                    granted = result
+                    semaphore.signal()
+                }
+                semaphore.wait()
+                
+                if granted {
+                    print("✅ Microphone permission granted")
+                } else {
+                    print("❌ Microphone permission denied - audio capture will not work")
+                    throw AudioMonitorError.permissionDenied
+                }
+            } else if status != .authorized {
                 print("⚠️  WARNING: Microphone permission not granted!")
                 print("   Menu bar apps need this even for virtual devices")
                 print("   Go to System Settings > Privacy & Security > Microphone")
+                print("   Then restart the app")
+                throw AudioMonitorError.permissionDenied
+            } else {
+                print("✅ Microphone permission already authorized")
             }
         }
         #endif
@@ -589,4 +611,5 @@ public enum AudioMonitorError: Error {
     case callbackSetFailed(OSStatus)
     case initializeFailed(OSStatus)
     case startFailed(OSStatus)
+    case permissionDenied
 }
