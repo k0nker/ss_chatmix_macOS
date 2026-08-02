@@ -7,16 +7,27 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A1012B78301FE1580016B995 /* SSChatMixCore in Frameworks */ = {isa = PBXBuildFile; productRef = A1012B77301FE1580016B995 /* SSChatMixCore */; };
 		A1012B7C301FE5920016B995 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B7B301FE5920016B995 /* SettingsView.swift */; };
 		A1012B7D301FE5920016B995 /* DeviceSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B79301FE5920016B995 /* DeviceSelectionView.swift */; };
 		A1012B7E301FE5920016B995 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B7A301FE5920016B995 /* MenuBarController.swift */; };
+		A1012B85301FE7BA0016B995 /* AudioController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B7F301FE7BA0016B995 /* AudioController.swift */; };
+		A1012B86301FE7BA0016B995 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B81301FE7BA0016B995 /* Config.swift */; };
+		A1012B87301FE7BA0016B995 /* AudioMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B80301FE7BA0016B995 /* AudioMonitor.swift */; };
+		A1012B88301FE7BA0016B995 /* ConfigManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B82301FE7BA0016B995 /* ConfigManager.swift */; };
+		A1012B89301FE7BA0016B995 /* HIDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B83301FE7BA0016B995 /* HIDController.swift */; };
+		A1012B8A301FE7BA0016B995 /* SSChatMixApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B84301FE7BA0016B995 /* SSChatMixApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A1012B79301FE5920016B995 /* DeviceSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSelectionView.swift; sourceTree = "<group>"; };
 		A1012B7A301FE5920016B995 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1012B7B301FE5920016B995 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1012B7F301FE7BA0016B995 /* AudioController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioController.swift; sourceTree = "<group>"; };
+		A1012B80301FE7BA0016B995 /* AudioMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioMonitor.swift; sourceTree = "<group>"; };
+		A1012B81301FE7BA0016B995 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		A1012B82301FE7BA0016B995 /* ConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigManager.swift; sourceTree = "<group>"; };
+		A1012B83301FE7BA0016B995 /* HIDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIDController.swift; sourceTree = "<group>"; };
+		A1012B84301FE7BA0016B995 /* SSChatMixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSChatMixApp.swift; sourceTree = "<group>"; };
 		A1AFADB1301FE026001ED19B /* SSChatMix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SSChatMix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -25,7 +36,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1012B78301FE1580016B995 /* SSChatMixCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -42,6 +52,12 @@
 		A1012B72301FE0CC0016B995 /* SSChatMixApp */ = {
 			isa = PBXGroup;
 			children = (
+				A1012B7F301FE7BA0016B995 /* AudioController.swift */,
+				A1012B80301FE7BA0016B995 /* AudioMonitor.swift */,
+				A1012B81301FE7BA0016B995 /* Config.swift */,
+				A1012B82301FE7BA0016B995 /* ConfigManager.swift */,
+				A1012B83301FE7BA0016B995 /* HIDController.swift */,
+				A1012B84301FE7BA0016B995 /* SSChatMixApp.swift */,
 				A1012B79301FE5920016B995 /* DeviceSelectionView.swift */,
 				A1012B7A301FE5920016B995 /* MenuBarController.swift */,
 				A1012B7B301FE5920016B995 /* SettingsView.swift */,
@@ -83,7 +99,6 @@
 			);
 			name = SSChatMix;
 			packageProductDependencies = (
-				A1012B77301FE1580016B995 /* SSChatMixCore */,
 			);
 			productName = SSChatMix;
 			productReference = A1AFADB1301FE026001ED19B /* SSChatMix.app */;
@@ -143,6 +158,12 @@
 			files = (
 				A1012B7C301FE5920016B995 /* SettingsView.swift in Sources */,
 				A1012B7D301FE5920016B995 /* DeviceSelectionView.swift in Sources */,
+				A1012B85301FE7BA0016B995 /* AudioController.swift in Sources */,
+				A1012B86301FE7BA0016B995 /* Config.swift in Sources */,
+				A1012B87301FE7BA0016B995 /* AudioMonitor.swift in Sources */,
+				A1012B88301FE7BA0016B995 /* ConfigManager.swift in Sources */,
+				A1012B89301FE7BA0016B995 /* HIDController.swift in Sources */,
+				A1012B8A301FE7BA0016B995 /* SSChatMixApp.swift in Sources */,
 				A1012B7E301FE5920016B995 /* MenuBarController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -371,13 +392,6 @@
 			relativePath = ../ss_chatmix_macOS;
 		};
 /* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		A1012B77301FE1580016B995 /* SSChatMixCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SSChatMixCore;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A1AFADA9301FE026001ED19B /* Project object */;
 }

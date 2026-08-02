@@ -1,7 +1,7 @@
 import Foundation
 import CoreAudio
 
-public struct AudioDeviceInfo {
+public struct AudioDeviceInfo: Hashable {
     public let id: AudioDeviceID
     public let name: String
     public let uid: String
