@@ -125,9 +125,7 @@
 			);
 			mainGroup = A1AFADA8301FE026001ED19B;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-				A1012B76301FE1580016B995 /* XCLocalSwiftPackageReference "../ss_chatmix_macOS" */,
-			);
+
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A1AFADB2301FE026001ED19B /* Products */;
 			projectDirPath = "";
@@ -381,13 +379,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCLocalSwiftPackageReference section */
-		A1012B76301FE1580016B995 /* XCLocalSwiftPackageReference "../ss_chatmix_macOS" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../ss_chatmix_macOS;
-		};
-/* End XCLocalSwiftPackageReference section */
 	};
 	rootObject = A1AFADA9301FE026001ED19B /* Project object */;
 }
