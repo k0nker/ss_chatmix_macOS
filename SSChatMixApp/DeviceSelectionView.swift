@@ -29,8 +29,8 @@ struct DeviceSelectionView: View {
                     .padding(.vertical, 8)
                 } else {
                     Picker("Device:", selection: $viewModel.selectedHID) {
-                        ForEach(viewModel.hidDevices, id: \.productId) { device in
-                            Text("\(device.name) (\(device.productId))").tag(device as ChatMixDevice?)
+                        ForEach(viewModel.hidDevices, id: \.productID) { device in
+                            Text("\(device.productName) (VID: \(String(format: "0x%04X", device.vendorID)) PID: \(String(format: "0x%04X", device.productID)))").tag(device as ChatMixDevice?)
                         }
                     }
                     .labelsHidden()
@@ -151,14 +151,25 @@ class DeviceSelectionViewModel: ObservableObject {
         }
         
         return Config(
-            audioDevices: Config.AudioDevices(
-                game: Config.AudioDevice(uid: game.uid, name: game.name),
-                chat: Config.AudioDevice(uid: chat.uid, name: chat.name)
+            audioDevices: AudioDevicesConfig(
+                game: AudioDeviceConfig(
+                    id: UUID().uuidString,
+                    name: game.name,
+                    uid: game.uid,
+                    isAggregate: false
+                ),
+                chat: AudioDeviceConfig(
+                    id: UUID().uuidString,
+                    name: chat.name,
+                    uid: chat.uid,
+                    isAggregate: false
+                )
             ),
-            hidDevice: Config.HIDDeviceConfig(
-                vendorId: hid.vendorId,
-                productId: hid.productId
+            hidDevice: HIDDeviceConfig(
+                vendorId: String(format: "0x%04X", hid.vendorID),
+                productId: String(format: "0x%04X", hid.productID)
             ),
+            launchAgentEnabled: false,
             monitoringMode: true,
             outputDeviceUid: output.uid
         )

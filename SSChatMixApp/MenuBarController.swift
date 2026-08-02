@@ -30,7 +30,7 @@ class MenuBarController: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem.button {
-            button.image = NSImage(systemName: "slider.horizontal.3", accessibilityDescription: "ChatMix")
+            button.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "ChatMix")
             button.image?.isTemplate = true
         }
         

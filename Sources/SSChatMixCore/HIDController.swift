@@ -1,7 +1,7 @@
 import Foundation
 import IOKit.hid
 
-public struct ChatMixDevice {
+public struct ChatMixDevice: Hashable {
     public let vendorID: Int
     public let productID: Int
     public let productName: String
