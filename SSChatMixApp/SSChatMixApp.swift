@@ -2,11 +2,11 @@ import SwiftUI
 
 @main
 struct SSChatMixApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @NSApplicationDelegateAdaptor(MenuBarController.self) var menuBarController
     
     var body: some Scene {
         Settings {
-            PreferencesView()
+            EmptyView()
         }
     }
 }
