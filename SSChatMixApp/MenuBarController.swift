@@ -20,9 +20,18 @@ class MenuBarController: NSObject, NSApplicationDelegate {
     @Published var isRunning: Bool = false
     @Published var statusMessage: String = "Not configured"
     
-    // Available devices
+    // Available devices (published for SettingsView)
+    @Published var availableChatMixDevices: [ChatMixDevice] = []
+    @Published var availableAudioDevices: [AudioDeviceInfo] = []
+    
+    // Selected devices (published for SettingsView)
+    @Published var selectedChatMixDevice: ChatMixDevice?
+    @Published var selectedGameDevice: AudioDeviceInfo?
+    @Published var selectedChatDevice: AudioDeviceInfo?
+    @Published var selectedOutputDevice: AudioDeviceInfo?
+    
+    // Private cached lists
     private var availableHIDDevices: [ChatMixDevice] = []
-    private var availableAudioDevices: [AudioDeviceInfo] = []
     
     // Windows
     var settingsWindow: NSWindow?
@@ -71,13 +80,41 @@ class MenuBarController: NSObject, NSApplicationDelegate {
         // Load HID devices
         let hidController = HIDController()
         availableHIDDevices = hidController.listChatMixDevices()
+        availableChatMixDevices = availableHIDDevices // Publish for SwiftUI
         
         // Load audio devices
         do {
-            availableAudioDevices = try audioController.listOutputDevices()
+            let devices = try audioController.listOutputDevices()
+            availableAudioDevices = devices // Publish for SwiftUI
         } catch {
             print("Failed to load audio devices: \(error)")
         }
+        
+        // Update selected devices from config
+        updateSelectedDevicesFromConfig()
+    }
+    
+    func updateSelectedDevicesFromConfig() {
+        guard let config = config else {
+            selectedChatMixDevice = nil
+            selectedGameDevice = nil
+            selectedChatDevice = nil
+            selectedOutputDevice = nil
+            return
+        }
+        
+        // Find selected ChatMix device
+        if let vendorID = Int(config.hidDevice.vendorId.dropFirst(2), radix: 16),
+           let productID = Int(config.hidDevice.productId.dropFirst(2), radix: 16) {
+            selectedChatMixDevice = availableChatMixDevices.first {
+                $0.vendorID == vendorID && $0.productID == productID
+            }
+        }
+        
+        // Find selected audio devices
+        selectedGameDevice = availableAudioDevices.first { $0.uid == config.audioDevices.game.uid }
+        selectedChatDevice = availableAudioDevices.first { $0.uid == config.audioDevices.chat.uid }
+        selectedOutputDevice = availableAudioDevices.first { $0.uid == config.outputDeviceUid }
     }
     
     func updateMenu() {
@@ -386,29 +423,38 @@ class MenuBarController: NSObject, NSApplicationDelegate {
     
     @objc func selectChatMixDevice(_ sender: NSMenuItem) {
         guard let device = sender.representedObject as? ChatMixDevice else { return }
-        
-        // Create or update config with new HID device
-        updateHIDDevice(device)
+        selectChatMixDevice(device)
     }
     
     @objc func selectGameDevice(_ sender: NSMenuItem) {
         guard let device = sender.representedObject as? AudioDeviceInfo else { return }
-        
-        // Create or update config with new game device
-        updateGameDevice(device)
+        selectGameDevice(device)
     }
     
     @objc func selectChatDevice(_ sender: NSMenuItem) {
         guard let device = sender.representedObject as? AudioDeviceInfo else { return }
-        
-        // Create or update config with new chat device
-        updateChatDevice(device)
+        selectChatDevice(device)
     }
     
     @objc func selectOutputDevice(_ sender: NSMenuItem) {
         guard let device = sender.representedObject as? AudioDeviceInfo else { return }
-        
-        // Create or update config with new output device
+        selectOutputDevice(device)
+    }
+    
+    // Public methods for SettingsView to call
+    func selectChatMixDevice(_ device: ChatMixDevice) {
+        updateHIDDevice(device)
+    }
+    
+    func selectGameDevice(_ device: AudioDeviceInfo) {
+        updateGameDevice(device)
+    }
+    
+    func selectChatDevice(_ device: AudioDeviceInfo) {
+        updateChatDevice(device)
+    }
+    
+    func selectOutputDevice(_ device: AudioDeviceInfo) {
         updateOutputDevice(device)
     }
     
@@ -564,6 +610,9 @@ class MenuBarController: NSObject, NSApplicationDelegate {
             print("   Output: \(config.outputDeviceUid ?? "not set")")
             print("   HID: \(config.hidDevice.vendorId):\(config.hidDevice.productId)")
             
+            // Update selected devices for UI
+            updateSelectedDevicesFromConfig()
+            
             stopController()
             startController()
             updateMenu()
@@ -574,19 +623,17 @@ class MenuBarController: NSObject, NSApplicationDelegate {
     }
     
     @objc func showSettings() {
-        if settingsWindow == nil {
-            let settingsView = SettingsView(config: config)
-            let hostingController = NSHostingController(rootView: settingsView)
-            
-            let window = NSWindow(contentViewController: hostingController)
-            window.title = "Settings"
-            window.styleMask = [.titled, .closable]
-            window.setContentSize(NSSize(width: 500, height: 300))
-            window.center()
-            
-            settingsWindow = window
-        }
+        // Always recreate window to show fresh data
+        let settingsView = SettingsView(controller: self)
+        let hostingController = NSHostingController(rootView: settingsView)
         
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "SSChatMix Settings"
+        window.styleMask = [.titled, .closable, .resizable]
+        window.setContentSize(NSSize(width: 550, height: 600))
+        window.center()
+        
+        settingsWindow = window
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
