@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		A1012B7C301FE5920016B995 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B7B301FE5920016B995 /* SettingsView.swift */; };
-		A1012B7D301FE5920016B995 /* DeviceSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B79301FE5920016B995 /* DeviceSelectionView.swift */; };
 		A1012B7E301FE5920016B995 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B7A301FE5920016B995 /* MenuBarController.swift */; };
 		A1012B85301FE7BA0016B995 /* AudioController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B7F301FE7BA0016B995 /* AudioController.swift */; };
 		A1012B86301FE7BA0016B995 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B81301FE7BA0016B995 /* Config.swift */; };
@@ -19,7 +18,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A1012B79301FE5920016B995 /* DeviceSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSelectionView.swift; sourceTree = "<group>"; };
 		A1012B7A301FE5920016B995 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1012B7B301FE5920016B995 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1012B7F301FE7BA0016B995 /* AudioController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioController.swift; sourceTree = "<group>"; };
@@ -58,7 +56,6 @@
 				A1012B82301FE7BA0016B995 /* ConfigManager.swift */,
 				A1012B83301FE7BA0016B995 /* HIDController.swift */,
 				A1012B84301FE7BA0016B995 /* SSChatMixApp.swift */,
-				A1012B79301FE5920016B995 /* DeviceSelectionView.swift */,
 				A1012B7A301FE5920016B995 /* MenuBarController.swift */,
 				A1012B7B301FE5920016B995 /* SettingsView.swift */,
 				A1012B6E301FE0CC0016B995 /* Resources */,
@@ -157,7 +154,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1012B7C301FE5920016B995 /* SettingsView.swift in Sources */,
-				A1012B7D301FE5920016B995 /* DeviceSelectionView.swift in Sources */,
 				A1012B85301FE7BA0016B995 /* AudioController.swift in Sources */,
 				A1012B86301FE7BA0016B995 /* Config.swift in Sources */,
 				A1012B87301FE7BA0016B995 /* AudioMonitor.swift in Sources */,

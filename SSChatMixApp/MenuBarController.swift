@@ -46,10 +46,19 @@ class MenuBarController: NSObject, NSApplicationDelegate {
         if configManager.exists() {
             do {
                 config = try configManager.load()
+                print("✅ Loaded config from: \(configManager.getConfigPath())")
+                print("   Game: \(config!.audioDevices.game.name)")
+                print("   Chat: \(config!.audioDevices.chat.name)")
+                print("   Output: \(config!.outputDeviceUid ?? "not set")")
+                print("   HID: \(config!.hidDevice.vendorId):\(config!.hidDevice.productId)")
                 startController()
             } catch {
+                print("❌ Failed to load config: \(error)")
                 statusMessage = "⚠️ Config error"
             }
+        } else {
+            print("ℹ️ No config file found at: \(configManager.getConfigPath())")
+            print("   Select devices from menu to configure")
         }
         
         // Update menu every second
@@ -61,11 +70,11 @@ class MenuBarController: NSObject, NSApplicationDelegate {
     func loadAvailableDevices() {
         // Load HID devices
         let hidController = HIDController()
-        availableHIDDevices = hidController.listDevices()
+        availableHIDDevices = hidController.listChatMixDevices()
         
         // Load audio devices
         do {
-            availableAudioDevices = try audioController.listDevices()
+            availableAudioDevices = try audioController.listOutputDevices()
         } catch {
             print("Failed to load audio devices: \(error)")
         }
@@ -398,59 +407,105 @@ class MenuBarController: NSObject, NSApplicationDelegate {
     }
     
     func updateGameDevice(_ device: AudioDeviceInfo) {
-        guard let currentConfig = config else { return }
-        
-        config = Config(
-            audioDevices: AudioDevicesConfig(
-                game: AudioDeviceConfig(
-                    id: String(device.id),
-                    name: device.name,
-                    uid: device.uid,
-                    isAggregate: device.isAggregate
+        if config == nil {
+            // Create minimal config with this device
+            config = Config(
+                audioDevices: AudioDevicesConfig(
+                    game: AudioDeviceConfig(
+                        id: String(device.id),
+                        name: device.name,
+                        uid: device.uid,
+                        isAggregate: device.isAggregate
+                    ),
+                    chat: AudioDeviceConfig(id: "", name: "Not configured", uid: "", isAggregate: false)
                 ),
-                chat: currentConfig.audioDevices.chat
-            ),
-            hidDevice: currentConfig.hidDevice,
-            launchAgentEnabled: currentConfig.launchAgentEnabled,
-            monitoringMode: currentConfig.monitoringMode,
-            outputDeviceUid: currentConfig.outputDeviceUid
-        )
+                hidDevice: HIDDeviceConfig(vendorId: "0x0000", productId: "0x0000"),
+                launchAgentEnabled: false,
+                monitoringMode: true,
+                outputDeviceUid: nil
+            )
+        } else if let currentConfig = config {
+            config = Config(
+                audioDevices: AudioDevicesConfig(
+                    game: AudioDeviceConfig(
+                        id: String(device.id),
+                        name: device.name,
+                        uid: device.uid,
+                        isAggregate: device.isAggregate
+                    ),
+                    chat: currentConfig.audioDevices.chat
+                ),
+                hidDevice: currentConfig.hidDevice,
+                launchAgentEnabled: currentConfig.launchAgentEnabled,
+                monitoringMode: currentConfig.monitoringMode,
+                outputDeviceUid: currentConfig.outputDeviceUid
+            )
+        }
         
         saveAndRestart()
     }
     
     func updateChatDevice(_ device: AudioDeviceInfo) {
-        guard let currentConfig = config else { return }
-        
-        config = Config(
-            audioDevices: AudioDevicesConfig(
-                game: currentConfig.audioDevices.game,
-                chat: AudioDeviceConfig(
-                    id: String(device.id),
-                    name: device.name,
-                    uid: device.uid,
-                    isAggregate: device.isAggregate
-                )
-            ),
-            hidDevice: currentConfig.hidDevice,
-            launchAgentEnabled: currentConfig.launchAgentEnabled,
-            monitoringMode: currentConfig.monitoringMode,
-            outputDeviceUid: currentConfig.outputDeviceUid
-        )
+        if config == nil {
+            // Create minimal config with this device
+            config = Config(
+                audioDevices: AudioDevicesConfig(
+                    game: AudioDeviceConfig(id: "", name: "Not configured", uid: "", isAggregate: false),
+                    chat: AudioDeviceConfig(
+                        id: String(device.id),
+                        name: device.name,
+                        uid: device.uid,
+                        isAggregate: device.isAggregate
+                    )
+                ),
+                hidDevice: HIDDeviceConfig(vendorId: "0x0000", productId: "0x0000"),
+                launchAgentEnabled: false,
+                monitoringMode: true,
+                outputDeviceUid: nil
+            )
+        } else if let currentConfig = config {
+            config = Config(
+                audioDevices: AudioDevicesConfig(
+                    game: currentConfig.audioDevices.game,
+                    chat: AudioDeviceConfig(
+                        id: String(device.id),
+                        name: device.name,
+                        uid: device.uid,
+                        isAggregate: device.isAggregate
+                    )
+                ),
+                hidDevice: currentConfig.hidDevice,
+                launchAgentEnabled: currentConfig.launchAgentEnabled,
+                monitoringMode: currentConfig.monitoringMode,
+                outputDeviceUid: currentConfig.outputDeviceUid
+            )
+        }
         
         saveAndRestart()
     }
     
     func updateOutputDevice(_ device: AudioDeviceInfo) {
-        guard let currentConfig = config else { return }
-        
-        config = Config(
-            audioDevices: currentConfig.audioDevices,
-            hidDevice: currentConfig.hidDevice,
-            launchAgentEnabled: currentConfig.launchAgentEnabled,
-            monitoringMode: currentConfig.monitoringMode,
-            outputDeviceUid: device.uid
-        )
+        if config == nil {
+            // Create minimal config with this device
+            config = Config(
+                audioDevices: AudioDevicesConfig(
+                    game: AudioDeviceConfig(id: "", name: "Not configured", uid: "", isAggregate: false),
+                    chat: AudioDeviceConfig(id: "", name: "Not configured", uid: "", isAggregate: false)
+                ),
+                hidDevice: HIDDeviceConfig(vendorId: "0x0000", productId: "0x0000"),
+                launchAgentEnabled: false,
+                monitoringMode: true,
+                outputDeviceUid: device.uid
+            )
+        } else if let currentConfig = config {
+            config = Config(
+                audioDevices: currentConfig.audioDevices,
+                hidDevice: currentConfig.hidDevice,
+                launchAgentEnabled: currentConfig.launchAgentEnabled,
+                monitoringMode: currentConfig.monitoringMode,
+                outputDeviceUid: device.uid
+            )
+        }
         
         saveAndRestart()
     }
@@ -460,10 +515,17 @@ class MenuBarController: NSObject, NSApplicationDelegate {
         
         do {
             try configManager.save(config)
+            print("✅ Config saved to: \(configManager.getConfigPath())")
+            print("   Game: \(config.audioDevices.game.name)")
+            print("   Chat: \(config.audioDevices.chat.name)")
+            print("   Output: \(config.outputDeviceUid ?? "not set")")
+            print("   HID: \(config.hidDevice.vendorId):\(config.hidDevice.productId)")
+            
             stopController()
             startController()
             updateMenu()
         } catch {
+            print("❌ Failed to save config: \(error)")
             statusMessage = "❌ Failed to save config"
         }
     }
