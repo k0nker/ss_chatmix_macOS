@@ -10,6 +10,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var audioController = AudioController()
     var processManager = ProcessManager()
     var preferencesWindow: NSWindow?
+    var setupWindow: NSWindow?
     
     // Volume state
     @Published var gameVolume: Int = 50
@@ -160,39 +161,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func changeDevices() {
-        let alert = NSAlert()
-        alert.messageText = "Change Devices"
-        alert.informativeText = "This will open Terminal to run the device selection wizard."
-        alert.addButton(withTitle: "Open Terminal")
-        alert.addButton(withTitle: "Cancel")
-        alert.alertStyle = .informational
-        
-        if alert.runModal() == .alertFirstButtonReturn {
-            // Open terminal and run device command
-            let script = "tell application \"Terminal\" to do script \"sschatmix --device\""
-            if let scriptObject = NSAppleScript(source: script) {
-                var error: NSDictionary?
-                scriptObject.executeAndReturnError(&error)
-            }
-        }
+        showSetupWizard()
     }
     
     @objc func runSetup() {
-        let alert = NSAlert()
-        alert.messageText = "Initial Setup"
-        alert.informativeText = "This will open Terminal to run the setup wizard."
-        alert.addButton(withTitle: "Open Terminal")
-        alert.addButton(withTitle: "Cancel")
-        alert.alertStyle = .informational
-        
-        if alert.runModal() == .alertFirstButtonReturn {
-            // Open terminal and run setup
-            let script = "tell application \"Terminal\" to do script \"sschatmix --setup\""
-            if let scriptObject = NSAppleScript(source: script) {
-                var error: NSDictionary?
-                scriptObject.executeAndReturnError(&error)
-            }
+        showSetupWizard()
+    }
+    
+    func showSetupWizard() {
+        if setupWindow == nil {
+            let setupView = SetupWizardView()
+            let hostingController = NSHostingController(rootView: setupView)
+            
+            let window = NSWindow(contentViewController: hostingController)
+            window.title = "ChatMix Setup"
+            window.styleMask = [.titled, .closable]
+            window.setContentSize(NSSize(width: 600, height: 500))
+            window.center()
+            
+            setupWindow = window
         }
+        
+        setupWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
     
     @objc func showPreferences() {
