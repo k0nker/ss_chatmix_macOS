@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import Combine
 
-class MenuBarController: NSObject, NSApplicationDelegate {
+class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     var statusItem: NSStatusItem!
     
     // Core components running in-process
