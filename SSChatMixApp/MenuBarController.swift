@@ -20,8 +20,11 @@ class MenuBarController: NSObject, NSApplicationDelegate {
     @Published var isRunning: Bool = false
     @Published var statusMessage: String = "Not configured"
     
+    // Available devices
+    private var availableHIDDevices: [ChatMixDevice] = []
+    private var availableAudioDevices: [AudioDeviceInfo] = []
+    
     // Windows
-    var deviceSelectionWindow: NSWindow?
     var settingsWindow: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -32,6 +35,9 @@ class MenuBarController: NSObject, NSApplicationDelegate {
             button.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "ChatMix")
             button.image?.isTemplate = true
         }
+        
+        // Load available devices
+        loadAvailableDevices()
         
         // Build menu
         updateMenu()
@@ -52,6 +58,19 @@ class MenuBarController: NSObject, NSApplicationDelegate {
         }
     }
     
+    func loadAvailableDevices() {
+        // Load HID devices
+        let hidController = HIDController()
+        availableHIDDevices = hidController.listDevices()
+        
+        // Load audio devices
+        do {
+            availableAudioDevices = try audioController.listDevices()
+        } catch {
+            print("Failed to load audio devices: \(error)")
+        }
+    }
+    
     func updateMenu() {
         let menu = NSMenu()
         
@@ -65,18 +84,20 @@ class MenuBarController: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         
         // Status
-        let statusItem = NSMenuItem(title: statusMessage, action: nil, keyEquivalent: "")
-        statusItem.isEnabled = false
-        menu.addItem(statusItem)
+        let statusMenuItem = NSMenuItem(title: statusMessage, action: nil, keyEquivalent: "")
+        statusMenuItem.isEnabled = false
+        menu.addItem(statusMenuItem)
         menu.addItem(NSMenuItem.separator())
         
-        // Device selection
-        let devicesItem = NSMenuItem(title: "Select Devices...", action: #selector(showDeviceSelection), keyEquivalent: "d")
-        devicesItem.target = self
-        menu.addItem(devicesItem)
+        // Device selection submenus
+        menu.addItem(buildChatMixDeviceMenu())
+        menu.addItem(buildGameDeviceMenu())
+        menu.addItem(buildChatDeviceMenu())
+        menu.addItem(buildOutputDeviceMenu())
         
         // Restart
         if isRunning {
+            menu.addItem(NSMenuItem.separator())
             let restartItem = NSMenuItem(title: "Restart Controller", action: #selector(restartController), keyEquivalent: "r")
             restartItem.target = self
             menu.addItem(restartItem)
@@ -96,12 +117,134 @@ class MenuBarController: NSObject, NSApplicationDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
+        // Refresh devices
+        let refreshItem = NSMenuItem(title: "Refresh Devices", action: #selector(refreshDevices), keyEquivalent: "")
+        refreshItem.target = self
+        menu.addItem(refreshItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
         // Quit
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         
         self.statusItem.menu = menu
+    }
+    
+    func buildChatMixDeviceMenu() -> NSMenuItem {
+        let menuItem = NSMenuItem(title: "ChatMix Device", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        
+        let currentVendorID = config.flatMap { Int($0.hidDevice.vendorId.dropFirst(2), radix: 16) }
+        let currentProductID = config.flatMap { Int($0.hidDevice.productId.dropFirst(2), radix: 16) }
+        
+        if availableHIDDevices.isEmpty {
+            let noneItem = NSMenuItem(title: "No devices found", action: nil, keyEquivalent: "")
+            noneItem.isEnabled = false
+            submenu.addItem(noneItem)
+        } else {
+            for device in availableHIDDevices {
+                let title = "\(device.productName) (VID: \(String(format: "0x%04X", device.vendorID)) PID: \(String(format: "0x%04X", device.productID)))"
+                let item = NSMenuItem(title: title, action: #selector(selectChatMixDevice(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = device
+                
+                // Add checkmark if this is the current device
+                if device.vendorID == currentVendorID && device.productID == currentProductID {
+                    item.state = .on
+                }
+                
+                submenu.addItem(item)
+            }
+        }
+        
+        menuItem.submenu = submenu
+        return menuItem
+    }
+    
+    func buildGameDeviceMenu() -> NSMenuItem {
+        let menuItem = NSMenuItem(title: "Game Device", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        
+        let currentUID = config?.audioDevices.game.uid
+        
+        if availableAudioDevices.isEmpty {
+            let noneItem = NSMenuItem(title: "No devices found", action: nil, keyEquivalent: "")
+            noneItem.isEnabled = false
+            submenu.addItem(noneItem)
+        } else {
+            for device in availableAudioDevices {
+                let item = NSMenuItem(title: device.name, action: #selector(selectGameDevice(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = device
+                
+                if device.uid == currentUID {
+                    item.state = .on
+                }
+                
+                submenu.addItem(item)
+            }
+        }
+        
+        menuItem.submenu = submenu
+        return menuItem
+    }
+    
+    func buildChatDeviceMenu() -> NSMenuItem {
+        let menuItem = NSMenuItem(title: "Chat Device", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        
+        let currentUID = config?.audioDevices.chat.uid
+        
+        if availableAudioDevices.isEmpty {
+            let noneItem = NSMenuItem(title: "No devices found", action: nil, keyEquivalent: "")
+            noneItem.isEnabled = false
+            submenu.addItem(noneItem)
+        } else {
+            for device in availableAudioDevices {
+                let item = NSMenuItem(title: device.name, action: #selector(selectChatDevice(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = device
+                
+                if device.uid == currentUID {
+                    item.state = .on
+                }
+                
+                submenu.addItem(item)
+            }
+        }
+        
+        menuItem.submenu = submenu
+        return menuItem
+    }
+    
+    func buildOutputDeviceMenu() -> NSMenuItem {
+        let menuItem = NSMenuItem(title: "Output Device", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        
+        let currentUID = config?.outputDeviceUid
+        
+        if availableAudioDevices.isEmpty {
+            let noneItem = NSMenuItem(title: "No devices found", action: nil, keyEquivalent: "")
+            noneItem.isEnabled = false
+            submenu.addItem(noneItem)
+        } else {
+            for device in availableAudioDevices {
+                let item = NSMenuItem(title: device.name, action: #selector(selectOutputDevice(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = device
+                
+                if device.uid == currentUID {
+                    item.state = .on
+                }
+                
+                submenu.addItem(item)
+            }
+        }
+        
+        menuItem.submenu = submenu
+        return menuItem
     }
     
     func startController() {
@@ -189,28 +332,140 @@ class MenuBarController: NSObject, NSApplicationDelegate {
         }
     }
     
-    @objc func showDeviceSelection() {
-        if deviceSelectionWindow == nil {
-            let deviceView = DeviceSelectionView { [weak self] newConfig in
-                self?.config = newConfig
-                try? self?.configManager.save(newConfig)
-                self?.startController()
-                self?.deviceSelectionWindow?.close()
-                self?.deviceSelectionWindow = nil
-            }
-            
-            let hostingController = NSHostingController(rootView: deviceView)
-            let window = NSWindow(contentViewController: hostingController)
-            window.title = "Select Devices"
-            window.styleMask = [.titled, .closable]
-            window.setContentSize(NSSize(width: 600, height: 500))
-            window.center()
-            
-            deviceSelectionWindow = window
+    @objc func selectChatMixDevice(_ sender: NSMenuItem) {
+        guard let device = sender.representedObject as? ChatMixDevice else { return }
+        
+        // Create or update config with new HID device
+        updateHIDDevice(device)
+    }
+    
+    @objc func selectGameDevice(_ sender: NSMenuItem) {
+        guard let device = sender.representedObject as? AudioDeviceInfo else { return }
+        
+        // Create or update config with new game device
+        updateGameDevice(device)
+    }
+    
+    @objc func selectChatDevice(_ sender: NSMenuItem) {
+        guard let device = sender.representedObject as? AudioDeviceInfo else { return }
+        
+        // Create or update config with new chat device
+        updateChatDevice(device)
+    }
+    
+    @objc func selectOutputDevice(_ sender: NSMenuItem) {
+        guard let device = sender.representedObject as? AudioDeviceInfo else { return }
+        
+        // Create or update config with new output device
+        updateOutputDevice(device)
+    }
+    
+    @objc func refreshDevices() {
+        loadAvailableDevices()
+        updateMenu()
+    }
+    
+    func updateHIDDevice(_ device: ChatMixDevice) {
+        if config == nil {
+            // Create minimal config with this device
+            config = Config(
+                audioDevices: AudioDevicesConfig(
+                    game: AudioDeviceConfig(id: "", name: "Not configured", uid: "", isAggregate: false),
+                    chat: AudioDeviceConfig(id: "", name: "Not configured", uid: "", isAggregate: false)
+                ),
+                hidDevice: HIDDeviceConfig(
+                    vendorId: String(format: "0x%04X", device.vendorID),
+                    productId: String(format: "0x%04X", device.productID)
+                ),
+                launchAgentEnabled: false,
+                monitoringMode: true,
+                outputDeviceUid: nil
+            )
+        } else if let currentConfig = config {
+            config = Config(
+                audioDevices: currentConfig.audioDevices,
+                hidDevice: HIDDeviceConfig(
+                    vendorId: String(format: "0x%04X", device.vendorID),
+                    productId: String(format: "0x%04X", device.productID)
+                ),
+                launchAgentEnabled: currentConfig.launchAgentEnabled,
+                monitoringMode: currentConfig.monitoringMode,
+                outputDeviceUid: currentConfig.outputDeviceUid
+            )
         }
         
-        deviceSelectionWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        saveAndRestart()
+    }
+    
+    func updateGameDevice(_ device: AudioDeviceInfo) {
+        guard let currentConfig = config else { return }
+        
+        config = Config(
+            audioDevices: AudioDevicesConfig(
+                game: AudioDeviceConfig(
+                    id: String(device.id),
+                    name: device.name,
+                    uid: device.uid,
+                    isAggregate: device.isAggregate
+                ),
+                chat: currentConfig.audioDevices.chat
+            ),
+            hidDevice: currentConfig.hidDevice,
+            launchAgentEnabled: currentConfig.launchAgentEnabled,
+            monitoringMode: currentConfig.monitoringMode,
+            outputDeviceUid: currentConfig.outputDeviceUid
+        )
+        
+        saveAndRestart()
+    }
+    
+    func updateChatDevice(_ device: AudioDeviceInfo) {
+        guard let currentConfig = config else { return }
+        
+        config = Config(
+            audioDevices: AudioDevicesConfig(
+                game: currentConfig.audioDevices.game,
+                chat: AudioDeviceConfig(
+                    id: String(device.id),
+                    name: device.name,
+                    uid: device.uid,
+                    isAggregate: device.isAggregate
+                )
+            ),
+            hidDevice: currentConfig.hidDevice,
+            launchAgentEnabled: currentConfig.launchAgentEnabled,
+            monitoringMode: currentConfig.monitoringMode,
+            outputDeviceUid: currentConfig.outputDeviceUid
+        )
+        
+        saveAndRestart()
+    }
+    
+    func updateOutputDevice(_ device: AudioDeviceInfo) {
+        guard let currentConfig = config else { return }
+        
+        config = Config(
+            audioDevices: currentConfig.audioDevices,
+            hidDevice: currentConfig.hidDevice,
+            launchAgentEnabled: currentConfig.launchAgentEnabled,
+            monitoringMode: currentConfig.monitoringMode,
+            outputDeviceUid: device.uid
+        )
+        
+        saveAndRestart()
+    }
+    
+    func saveAndRestart() {
+        guard let config = config else { return }
+        
+        do {
+            try configManager.save(config)
+            stopController()
+            startController()
+            updateMenu()
+        } catch {
+            statusMessage = "❌ Failed to save config"
+        }
     }
     
     @objc func showSettings() {
