@@ -418,8 +418,10 @@ public class AudioMonitor {
         }
         
         if status == noErr {
-            // Write to ring buffer
-            gameBuffer.write(Array(gameAudioBuffer.prefix(bufferSize)))
+            // Write to ring buffer using pointer (no array allocation!)
+            gameAudioBuffer.withUnsafeBufferPointer { bufferPointer in
+                gameBuffer.write(bufferPointer.baseAddress!, count: bufferSize)
+            }
         }
         
         return status
@@ -454,8 +456,10 @@ public class AudioMonitor {
         }
         
         if status == noErr {
-            // Write to ring buffer
-            chatBuffer.write(Array(chatAudioBuffer.prefix(bufferSize)))
+            // Write to ring buffer using pointer (no array allocation!)
+            chatAudioBuffer.withUnsafeBufferPointer { bufferPointer in
+                chatBuffer.write(bufferPointer.baseAddress!, count: bufferSize)
+            }
         }
         
         return status
@@ -467,20 +471,23 @@ public class AudioMonitor {
     ) -> OSStatus {
         let frameCount = Int(inNumberFrames * channels)
         
-        // Read from ring buffers
-        let gameData = gameBuffer.read(frameCount)
-        let chatData = chatBuffer.read(frameCount)
-        
         // Get output buffer
         guard let outputBuffer = ioData.pointee.mBuffers.mData?.assumingMemoryBound(to: Float.self) else {
             return kAudioUnitErr_InvalidProperty
         }
         
-        // Mix audio with volume applied
-        for i in 0..<frameCount {
-            let gameSample = i < gameData.count ? gameData[i] * gameVolume : 0.0
-            let chatSample = i < chatData.count ? chatData[i] * chatVolume : 0.0
-            outputBuffer[i] = gameSample + chatSample
+        // Use the persistent audio buffers as temp storage
+        gameAudioBuffer.withUnsafeMutableBufferPointer { gamePtr in
+            chatAudioBuffer.withUnsafeMutableBufferPointer { chatPtr in
+                // Read from ring buffers directly into temp buffers
+                gameBuffer.read(gamePtr.baseAddress!, count: frameCount)
+                chatBuffer.read(chatPtr.baseAddress!, count: frameCount)
+                
+                // Mix directly to output buffer (no intermediate arrays!)
+                for i in 0..<frameCount {
+                    outputBuffer[i] = gamePtr[i] * gameVolume + chatPtr[i] * chatVolume
+                }
+            }
         }
         
         return noErr
@@ -528,7 +535,7 @@ private func outputRenderCallback(
 // MARK: - Ring Buffer
 
 private class RingBuffer {
-    private var buffer: [Float]
+    private var buffer: UnsafeMutablePointer<Float>
     private var writeIndex = 0
     private var readIndex = 0
     private let capacity: Int
@@ -536,32 +543,46 @@ private class RingBuffer {
     
     init(capacity: Int) {
         self.capacity = capacity
-        self.buffer = Array(repeating: 0.0, count: capacity)
+        self.buffer = UnsafeMutablePointer<Float>.allocate(capacity: capacity)
+        self.buffer.initialize(repeating: 0.0, count: capacity)
     }
     
-    func write(_ data: [Float]) {
+    deinit {
+        buffer.deallocate()
+    }
+    
+    func write(_ data: UnsafePointer<Float>, count: Int) {
         lock.lock()
         defer { lock.unlock() }
         
-        for sample in data {
-            buffer[writeIndex] = sample
-            writeIndex = (writeIndex + 1) % capacity
+        // Fast path: no wrap-around
+        if writeIndex + count <= capacity {
+            buffer.advanced(by: writeIndex).assign(from: data, count: count)
+            writeIndex = (writeIndex + count) % capacity
+        } else {
+            // Slow path: wrap-around
+            let firstChunk = capacity - writeIndex
+            buffer.advanced(by: writeIndex).assign(from: data, count: firstChunk)
+            buffer.assign(from: data.advanced(by: firstChunk), count: count - firstChunk)
+            writeIndex = count - firstChunk
         }
     }
     
-    func read(_ count: Int) -> [Float] {
+    func read(_ data: UnsafeMutablePointer<Float>, count: Int) {
         lock.lock()
         defer { lock.unlock() }
         
-        var result = [Float]()
-        result.reserveCapacity(count)
-        
-        for _ in 0..<count {
-            result.append(buffer[readIndex])
-            readIndex = (readIndex + 1) % capacity
+        // Fast path: no wrap-around
+        if readIndex + count <= capacity {
+            data.assign(from: buffer.advanced(by: readIndex), count: count)
+            readIndex = (readIndex + count) % capacity
+        } else {
+            // Slow path: wrap-around
+            let firstChunk = capacity - readIndex
+            data.assign(from: buffer.advanced(by: readIndex), count: firstChunk)
+            data.advanced(by: firstChunk).assign(from: buffer, count: count - firstChunk)
+            readIndex = count - firstChunk
         }
-        
-        return result
     }
 }
 
