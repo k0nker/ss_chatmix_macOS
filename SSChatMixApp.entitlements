@@ -25,5 +25,13 @@
         <string>com.apple.audio.audiohald</string>
         <string>com.apple.audioanalyticsd</string>
     </array>
+    
+    <!-- Also add non-temporary exceptions for production -->
+    <key>com.apple.security.exception.mach-lookup.global-name</key>
+    <array>
+        <string>com.apple.audio.coreaudiod</string>
+        <string>com.apple.audio.audiohald</string>
+        <string>com.apple.audioanalyticsd</string>
+    </array>
 </dict>
 </plist>
