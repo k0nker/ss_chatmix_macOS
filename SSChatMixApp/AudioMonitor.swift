@@ -32,12 +32,6 @@ public class AudioMonitor {
     private var chatAudioBuffer: [Float]
     private let maxFrames: Int = 4096
     
-    // Debug counters
-    private var gameInputCallbackCount = 0
-    private var chatInputCallbackCount = 0
-    private var outputCallbackCount = 0
-    private var lastDebugTime = Date()
-    
     public init(gameDeviceID: AudioDeviceID, chatDeviceID: AudioDeviceID, outputDeviceID: AudioDeviceID) {
         self.gameDeviceID = gameDeviceID
         self.chatDeviceID = chatDeviceID
@@ -145,7 +139,6 @@ public class AudioMonitor {
         // Clamp to 0.0-1.0 range
         self.gameVolume = min(max(game, 0.0), 1.0)
         self.chatVolume = min(max(chat, 0.0), 1.0)
-        print("🔊 AudioMonitor volumes updated: Game=\(Int(self.gameVolume * 100))% Chat=\(Int(self.chatVolume * 100))%")
     }
     
     // MARK: - Audio Unit Setup
@@ -400,13 +393,6 @@ public class AudioMonitor {
         inNumberFrames: UInt32,
         inTimeStamp: UnsafePointer<AudioTimeStamp>
     ) -> OSStatus {
-        gameInputCallbackCount += 1
-        
-        // Log every 500 callbacks (about once per 5 seconds)
-        if gameInputCallbackCount % 500 == 0 {
-            print("🎮 Game input callback #\(gameInputCallbackCount) - \(inNumberFrames) frames")
-        }
-        
         // Use persistent buffer
         let bufferSize = Int(inNumberFrames * channels)
         guard bufferSize <= gameAudioBuffer.count else {
@@ -434,8 +420,6 @@ public class AudioMonitor {
         if status == noErr {
             // Write to ring buffer
             gameBuffer.write(Array(gameAudioBuffer.prefix(bufferSize)))
-        } else {
-            print("❌ Game input AudioUnitRender failed: \(status)")
         }
         
         return status
@@ -445,13 +429,6 @@ public class AudioMonitor {
         inNumberFrames: UInt32,
         inTimeStamp: UnsafePointer<AudioTimeStamp>
     ) -> OSStatus {
-        chatInputCallbackCount += 1
-        
-        // Log every 500 callbacks
-        if chatInputCallbackCount % 500 == 0 {
-            print("💬 Chat input callback #\(chatInputCallbackCount) - \(inNumberFrames) frames")
-        }
-        
         // Use persistent buffer
         let bufferSize = Int(inNumberFrames * channels)
         guard bufferSize <= chatAudioBuffer.count else {
@@ -479,8 +456,6 @@ public class AudioMonitor {
         if status == noErr {
             // Write to ring buffer
             chatBuffer.write(Array(chatAudioBuffer.prefix(bufferSize)))
-        } else {
-            print("❌ Chat input AudioUnitRender failed: \(status)")
         }
         
         return status
@@ -490,22 +465,11 @@ public class AudioMonitor {
         inNumberFrames: UInt32,
         ioData: UnsafeMutablePointer<AudioBufferList>
     ) -> OSStatus {
-        outputCallbackCount += 1
-        
         let frameCount = Int(inNumberFrames * channels)
         
         // Read from ring buffers
         let gameData = gameBuffer.read(frameCount)
         let chatData = chatBuffer.read(frameCount)
-        
-        // Log every 500 callbacks with audio level info (about once per 5 seconds)
-        if outputCallbackCount % 500 == 0 {
-            let gamePeak = gameData.map(abs).max() ?? 0.0
-            let chatPeak = chatData.map(abs).max() ?? 0.0
-            print("🔊 Output callback #\(outputCallbackCount) - \(inNumberFrames) frames")
-            print("   Game peak: \(String(format: "%.3f", gamePeak)) (vol: \(Int(gameVolume * 100))%)")
-            print("   Chat peak: \(String(format: "%.3f", chatPeak)) (vol: \(Int(chatVolume * 100))%)")
-        }
         
         // Get output buffer
         guard let outputBuffer = ioData.pointee.mBuffers.mData?.assumingMemoryBound(to: Float.self) else {
