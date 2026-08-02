@@ -2,19 +2,21 @@
 
 Native macOS controller for SteelSeries Arctis Nova ChatMix dial.
 
+I put this together because SteelSeries does not support SONAR on macOS, which means their newer software driven ChatMix does not work outside of Windows.
+
 ## How It Works
 
 1. **Select two virtual audio devices** - You need two separate virtual outputs (like BlackHole 2ch and BlackHole 16ch)
 2. **Select physical output** - Choose your actual headphones/speakers where you want to hear the audio
 3. **Real-time audio mixing** - Reads from both virtual devices, applies volume control, mixes them, and outputs to your physical device
-4. **Route apps independently** - Direct game audio to one virtual device, chat/voice apps to the other
+4. **Route audio as preferred** - EITHER Direct game audio to one virtual device, chat/voice apps to the other OR Default audio set to one of your virtual outputs and then apps you want on the other channel to that virtual device.
 5. **Turn the dial** - Adjusts the mix levels in real-time before combining to your headphones
 
 **Performance:** < 0.5% CPU usage using CoreAudio Audio Units
 
 ### Recommended: BlackHole Virtual Audio Driver
 
-We recommend [BlackHole](https://github.com/ExistentialAudio/BlackHole) for virtual audio devices. Install both:
+I recommend [BlackHole](https://github.com/ExistentialAudio/BlackHole) for virtual audio devices. Install both:
 - **BlackHole 2ch** - For one audio source (e.g., game audio)
 - **BlackHole 16ch** - For another audio source (e.g., chat/Discord)
 
