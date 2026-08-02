@@ -26,6 +26,9 @@ public class HIDController {
     private var lastChatVolume: Int = -1
     private let debounceInterval: TimeInterval = 0.05  // 50ms debounce
     
+    // Track logged report IDs to avoid spam
+    private var loggedReportIDs = Set<UInt8>()
+    
     // Device IDs - configurable
     private var vendorID: Int = 0x1038  // SteelSeries (default)
     private var productID: Int = 0x2202 // Default, but should be configured
@@ -214,7 +217,6 @@ public class HIDController {
             }
         } else {
             // Log unexpected report IDs (but only once per ID to avoid spam)
-            static var loggedReportIDs = Set<UInt8>()
             if !loggedReportIDs.contains(reportID) {
                 print("ℹ️  HID report with ID \(String(format: "0x%02X", reportID)) (expected 0x45)")
                 loggedReportIDs.insert(reportID)
