@@ -53,9 +53,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         
         // Status
-        let statusItem = NSMenuItem(title: statusMessage, action: nil, keyEquivalent: "")
-        statusItem.isEnabled = false
-        menu.addItem(statusItem)
+        let statusMenuItem = NSMenuItem(title: statusMessage, action: nil, keyEquivalent: "")
+        statusMenuItem.isEnabled = false
+        menu.addItem(statusMenuItem)
         menu.addItem(NSMenuItem.separator())
         
         // Actions
@@ -72,7 +72,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
         
-        statusItem.menu = menu
+        self.statusItem.menu = menu
     }
     
     func updateMenu() {
