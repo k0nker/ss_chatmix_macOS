@@ -103,6 +103,7 @@ public class AudioMonitor {
         // Clamp to 0.0-1.0 range
         self.gameVolume = min(max(game, 0.0), 1.0)
         self.chatVolume = min(max(chat, 0.0), 1.0)
+        print("🔊 AudioMonitor volumes updated: Game=\(Int(self.gameVolume * 100))% Chat=\(Int(self.chatVolume * 100))%")
     }
     
     // MARK: - Audio Unit Setup

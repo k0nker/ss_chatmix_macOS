@@ -118,6 +118,14 @@ public class HIDController {
     // MARK: - Start Listening
     
     public func start() throws {
+        // First check if device is detectable
+        if !detectDevice() {
+            print("⚠️  HID device not detected - VID: \(String(format: "0x%04X", vendorID)) PID: \(String(format: "0x%04X", productID))")
+            print("   This might be normal if the device hasn't been plugged in yet")
+        } else {
+            print("✅ HID device detected")
+        }
+        
         manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
         
         guard let manager = manager else {
@@ -129,6 +137,8 @@ public class HIDController {
             kIOHIDProductIDKey: productID,
             kIOHIDPrimaryUsagePageKey: usagePage
         ]
+        
+        print("   Matching: VID=\(String(format: "0x%04X", vendorID)) PID=\(String(format: "0x%04X", productID)) UsagePage=\(String(format: "0x%04X", usagePage))")
         
         IOHIDManagerSetDeviceMatching(manager, matchingDict as CFDictionary)
         
@@ -149,8 +159,10 @@ public class HIDController {
         let openResult = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
         
         guard openResult == kIOReturnSuccess else {
-            throw SSChatMixError.hidControllerFailed("Failed to open HID manager")
+            throw SSChatMixError.hidControllerFailed("Failed to open HID manager (result: \(openResult))")
         }
+        
+        print("   HID manager opened successfully, listening for reports...")
     }
     
     public func stop() {
@@ -176,7 +188,10 @@ public class HIDController {
         let dataLength = IOHIDValueGetLength(value)
         let dataPtr = IOHIDValueGetBytePtr(value)
         
-        guard dataLength >= 3 else { return }
+        guard dataLength >= 3 else { 
+            print("⚠️  HID report too short: \(dataLength) bytes")
+            return 
+        }
         
         // Report format: [0x45, game_volume, chat_volume]
         let reportID = dataPtr[0]
@@ -196,6 +211,13 @@ public class HIDController {
                 
                 // Call the callback with both volumes
                 onDialChanged?(gameVolume, chatVolume)
+            }
+        } else {
+            // Log unexpected report IDs (but only once per ID to avoid spam)
+            static var loggedReportIDs = Set<UInt8>()
+            if !loggedReportIDs.contains(reportID) {
+                print("ℹ️  HID report with ID \(String(format: "0x%02X", reportID)) (expected 0x45)")
+                loggedReportIDs.insert(reportID)
             }
         }
     }

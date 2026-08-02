@@ -269,23 +269,35 @@ class MenuBarController: NSObject, NSApplicationDelegate {
             // Find audio devices
             guard let gameDeviceID = try audioController.findDevice(byUID: config.audioDevices.game.uid) else {
                 statusMessage = "❌ Game device not found"
+                print("❌ Game device not found: \(config.audioDevices.game.uid)")
                 return
             }
             
             guard let chatDeviceID = try audioController.findDevice(byUID: config.audioDevices.chat.uid) else {
                 statusMessage = "❌ Chat device not found"
+                print("❌ Chat device not found: \(config.audioDevices.chat.uid)")
                 return
             }
             
             guard let outputUID = config.outputDeviceUid,
                   let outputDeviceID = try audioController.findDevice(byUID: outputUID) else {
                 statusMessage = "❌ Output device not found"
+                print("❌ Output device not found: \(config.outputDeviceUid ?? "nil")")
                 return
             }
+            
+            print("🎚️  Starting audio monitoring...")
+            print("   Game input: Device \(gameDeviceID)")
+            print("   Chat input: Device \(chatDeviceID)")
+            print("   Output: Device \(outputDeviceID)")
             
             // Configure HID controller
             let vendorID = Int(config.hidDevice.vendorId.dropFirst(2), radix: 16) ?? 0x1038
             let productID = Int(config.hidDevice.productId.dropFirst(2), radix: 16) ?? 0x2202
+            
+            print("🎮 Configuring HID controller...")
+            print("   VendorID: \(String(format: "0x%04X", vendorID))")
+            print("   ProductID: \(String(format: "0x%04X", productID))")
             
             hidController = HIDController()
             hidController?.configure(vendorID: vendorID, productID: productID)
@@ -299,8 +311,12 @@ class MenuBarController: NSObject, NSApplicationDelegate {
             try monitor.start()
             audioMonitor = monitor
             
+            print("✅ Audio monitoring started")
+            
             // Set up HID callback
             hidController?.onDialChanged = { [weak self, weak monitor] gameVol, chatVol in
+                print("🎚️  Dial changed: Game=\(gameVol)% Chat=\(chatVol)%")
+                
                 DispatchQueue.main.async {
                     self?.gameVolume = gameVol
                     self?.chatVolume = chatVol
@@ -313,14 +329,19 @@ class MenuBarController: NSObject, NSApplicationDelegate {
             }
             
             // Start listening
+            print("🎮 Starting HID controller...")
             try hidController?.start()
+            print("✅ HID controller started")
             
             isRunning = true
             statusMessage = "✅ Running"
             
+            print("")
             print("✅ ChatMix Controller started")
+            print("   Move the dial to test...")
             
         } catch {
+            print("❌ Controller start failed: \(error)")
             statusMessage = "❌ Error: \(error.localizedDescription)"
             isRunning = false
         }
