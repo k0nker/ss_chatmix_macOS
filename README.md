@@ -98,6 +98,9 @@ The controller starts automatically after setup and at login (if enabled).
 # Check if running
 sschatmix --status
 
+# Restart the controller (e.g., after unplugging/replugging headset)
+sschatmix --reload
+
 # Start manually if needed
 sschatmix
 ```
@@ -112,6 +115,9 @@ sschatmix --status
 
 # Change audio devices
 sschatmix --device
+
+# Restart the controller (useful after disconnecting/reconnecting headset)
+sschatmix --reload
 
 # Debug HID device detection
 sschatmix --debug
@@ -184,6 +190,7 @@ ss_chatmix_macOS/
 │       ├── StatusCommand.swift      # Status display
 │       ├── DeviceCommand.swift      # Device selection
 │       ├── DebugCommand.swift       # Device detection debug
+│       ├── ReloadCommand.swift      # Restart background process
 │       ├── AggregateCommand.swift   # Aggregate device utilities
 │       ├── LoginCommand.swift       # Launch agent control
 │       └── ResetCommand.swift       # Reset configuration
@@ -202,6 +209,10 @@ ss_chatmix_macOS/
 - Ensure the virtual audio devices still exist (run `brew list | grep blackhole`)
 - Verify apps are routing audio to the correct virtual devices
 - Try `sschatmix --device` to reconfigure
+
+### No audio after unplugging/replugging headset
+- Run `sschatmix --reload` to restart the controller
+- This reconnects to the HID device and restarts audio monitoring
 
 ### No audio output
 - Verify BlackHole is installed: `brew list blackhole-2ch blackhole-16ch`

@@ -90,8 +90,17 @@ public class LaunchAgentManager {
         return FileManager.default.fileExists(atPath: launchAgentFile.path)
     }
     
-    private func getBinaryPath() -> String? {
-        // Get the path to the currently running executable
+    public func getBinaryPath() -> String? {
+        // Priority order for finding the binary:
+        // 1. /usr/local/bin/sschatmix (standard install location)
+        // 2. Current executable path (fallback)
+        
+        let standardPath = "/usr/local/bin/sschatmix"
+        if FileManager.default.fileExists(atPath: standardPath) {
+            return standardPath
+        }
+        
+        // Fallback to current executable path
         let executablePath = CommandLine.arguments[0]
         
         // If it's a relative path, make it absolute
