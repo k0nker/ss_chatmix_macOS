@@ -1,14 +1,11 @@
-# Swift build artifacts
-.build/
-.swiftpm/
-*.xcodeproj/
-*.xcworkspace/
+# Xcode build artifacts
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
 
 # macOS
 .DS_Store
-
-# Binary
-sschatmix
 
 # Config (for testing)
 config.json

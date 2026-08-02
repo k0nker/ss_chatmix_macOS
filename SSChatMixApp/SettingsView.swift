@@ -1,5 +1,4 @@
 import SwiftUI
-import SSChatMixCore
 
 struct SettingsView: View {
     let config: Config?

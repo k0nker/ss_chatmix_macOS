@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 import Combine
-import SSChatMixCore
 
 class MenuBarController: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!

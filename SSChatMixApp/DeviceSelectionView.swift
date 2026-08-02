@@ -1,6 +1,5 @@
 import SwiftUI
 import Combine
-import SSChatMixCore
 
 struct DeviceSelectionView: View {
     let onSave: (Config) -> Void
