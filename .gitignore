@@ -12,3 +12,7 @@ sschatmix
 
 # Config (for testing)
 config.json
+
+# Random
+.vscode
+Planning
