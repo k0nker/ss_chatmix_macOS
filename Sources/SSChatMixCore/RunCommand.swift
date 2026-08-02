@@ -7,6 +7,9 @@ public class RunCommand {
     private let processManager = ProcessManager()
     private var audioMonitor: AudioMonitor?
     
+    // Callback for volume changes (optional)
+    public var onVolumeChanged: ((Int, Int) -> Void)?
+    
     public init() {}
     
     public func execute() throws {
@@ -94,13 +97,16 @@ public class RunCommand {
             self.audioMonitor = monitor
             
             // Set up HID callback for volume updates
-            hidController.onDialChanged = { gameVolume, chatVolume in
+            hidController.onDialChanged = { [weak self] gameVolume, chatVolume in
                 // Update monitor volumes (0-100 range to 0.0-1.0)
                 monitor.updateVolumes(
                     game: Float(gameVolume) / 100.0,
                     chat: Float(chatVolume) / 100.0
                 )
                 print("🎮 Game: \(gameVolume)% | 💬 Chat: \(chatVolume)%")
+                
+                // Notify external callback if set
+                self?.onVolumeChanged?(gameVolume, chatVolume)
             }
             
         } else {
@@ -112,18 +118,21 @@ public class RunCommand {
             print("\nListening for dial changes... (Press Ctrl+C to stop)\n")
             
             // Set up HID callback for direct volume control
-            hidController.onDialChanged = { gameVolume, chatVolume in
+            hidController.onDialChanged = { [weak self] gameVolume, chatVolume in
                 do {
                     // Set game device volume
-                    try self.audioController.setVolume(Float(gameVolume), for: gameDeviceID)
+                    try self?.audioController.setVolume(Float(gameVolume), for: gameDeviceID)
                     
                     // Set chat device volume
-                    try self.audioController.setVolume(Float(chatVolume), for: chatDeviceID)
+                    try self?.audioController.setVolume(Float(chatVolume), for: chatDeviceID)
                     
                     print("🎮 Game: \(gameVolume)% | 💬 Chat: \(chatVolume)%")
                 } catch {
                     print("❌ Error setting volume: \(error.localizedDescription)")
                 }
+                
+                // Notify external callback if set
+                self?.onVolumeChanged?(gameVolume, chatVolume)
             }
         }
         

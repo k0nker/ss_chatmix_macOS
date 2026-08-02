@@ -8,6 +8,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var configManager = ConfigManager()
     var audioController = AudioController()
     var processManager = ProcessManager()
+    var preferencesWindow: NSWindow?
     
     // Volume state
     @Published var gameVolume: Int = 50
@@ -60,17 +61,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Actions
         if configManager.exists() {
-            menu.addItem(NSMenuItem(title: "Restart Controller", action: #selector(restartController), keyEquivalent: "r"))
-            menu.addItem(NSMenuItem(title: "Change Devices", action: #selector(changeDevices), keyEquivalent: "d"))
+            let restartItem = NSMenuItem(title: "Restart Controller", action: #selector(restartController), keyEquivalent: "r")
+            restartItem.target = self
+            menu.addItem(restartItem)
+            
+            let changeDevicesItem = NSMenuItem(title: "Change Devices", action: #selector(changeDevices), keyEquivalent: "d")
+            changeDevicesItem.target = self
+            menu.addItem(changeDevicesItem)
         } else {
-            menu.addItem(NSMenuItem(title: "Setup...", action: #selector(runSetup), keyEquivalent: "s"))
+            let setupItem = NSMenuItem(title: "Setup...", action: #selector(runSetup), keyEquivalent: "s")
+            setupItem.target = self
+            menu.addItem(setupItem)
         }
         
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Preferences...", action: #selector(showPreferences), keyEquivalent: ","))
-        menu.addItem(NSMenuItem(title: "About", action: #selector(showAbout), keyEquivalent: ""))
+        
+        let prefsItem = NSMenuItem(title: "Preferences...", action: #selector(showPreferences), keyEquivalent: ",")
+        prefsItem.target = self
+        menu.addItem(prefsItem)
+        
+        let aboutItem = NSMenuItem(title: "About", action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+        
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
+        
+        let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
         
         self.statusItem.menu = menu
     }
@@ -100,6 +118,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         runCommand = RunCommand()
+        
+        // Set up volume callback
+        runCommand?.onVolumeChanged = { [weak self] game, chat in
+            DispatchQueue.main.async {
+                self?.gameVolume = game
+                self?.chatVolume = chat
+            }
+        }
         
         // Start in background thread
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -169,7 +195,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func showPreferences() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        if preferencesWindow == nil {
+            let prefsView = PreferencesView()
+            let hostingController = NSHostingController(rootView: prefsView)
+            
+            let window = NSWindow(contentViewController: hostingController)
+            window.title = "Preferences"
+            window.styleMask = [.titled, .closable]
+            window.setContentSize(NSSize(width: 500, height: 400))
+            window.center()
+            
+            preferencesWindow = window
+        }
+        
+        preferencesWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
     
