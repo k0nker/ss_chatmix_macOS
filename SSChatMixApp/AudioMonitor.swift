@@ -1,6 +1,7 @@
 import Foundation
 import CoreAudio
 import AudioToolbox
+import AVFoundation
 
 /// Real-time audio monitoring that reads from two virtual devices,
 /// applies volume control, mixes them, and outputs to a physical device.
@@ -66,6 +67,19 @@ public class AudioMonitor {
         print("   Game input: Device \(gameDeviceID)")
         print("   Chat input: Device \(chatDeviceID)")
         print("   Output: Device \(outputDeviceID)")
+        
+        // Check microphone permission
+        #if os(macOS)
+        if #available(macOS 14.0, *) {
+            let status = AVCaptureDevice.authorizationStatus(for: .audio)
+            print("🎤 Microphone permission status: \(status.rawValue)")
+            if status != .authorized {
+                print("⚠️  WARNING: Microphone permission not granted!")
+                print("   Menu bar apps need this even for virtual devices")
+                print("   Go to System Settings > Privacy & Security > Microphone")
+            }
+        }
+        #endif
         
         // Create and configure audio units
         try setupGameInput()
@@ -366,8 +380,8 @@ public class AudioMonitor {
     ) -> OSStatus {
         gameInputCallbackCount += 1
         
-        // Log every 100 callbacks (about once per second at typical buffer sizes)
-        if gameInputCallbackCount % 100 == 0 {
+        // Log every 500 callbacks (about once per 5 seconds)
+        if gameInputCallbackCount % 500 == 0 {
             print("🎮 Game input callback #\(gameInputCallbackCount) - \(inNumberFrames) frames")
         }
         
@@ -411,8 +425,8 @@ public class AudioMonitor {
     ) -> OSStatus {
         chatInputCallbackCount += 1
         
-        // Log every 100 callbacks
-        if chatInputCallbackCount % 100 == 0 {
+        // Log every 500 callbacks
+        if chatInputCallbackCount % 500 == 0 {
             print("💬 Chat input callback #\(chatInputCallbackCount) - \(inNumberFrames) frames")
         }
         
@@ -462,8 +476,8 @@ public class AudioMonitor {
         let gameData = gameBuffer.read(frameCount)
         let chatData = chatBuffer.read(frameCount)
         
-        // Log every 100 callbacks with audio level info
-        if outputCallbackCount % 100 == 0 {
+        // Log every 500 callbacks with audio level info (about once per 5 seconds)
+        if outputCallbackCount % 500 == 0 {
             let gamePeak = gameData.map(abs).max() ?? 0.0
             let chatPeak = chatData.map(abs).max() ?? 0.0
             print("🔊 Output callback #\(outputCallbackCount) - \(inNumberFrames) frames")
