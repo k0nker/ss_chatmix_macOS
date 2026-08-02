@@ -2,11 +2,28 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- Disable app sandbox for audio/HID access -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+    
+    <!-- USB device access for HID controller -->
     <key>com.apple.security.device.usb</key>
     <true/>
+    
+    <!-- Audio input access -->
     <key>com.apple.security.device.audio-input</key>
     <true/>
+    
+    <!-- Allow unsigned executable memory (for CoreAudio) -->
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
     <true/>
+    
+    <!-- Mach-lookup exceptions for audio services -->
+    <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+    <array>
+        <string>com.apple.audio.coreaudiod</string>
+        <string>com.apple.audio.audiohald</string>
+        <string>com.apple.audioanalyticsd</string>
+    </array>
 </dict>
 </plist>
