@@ -21,7 +21,8 @@ public:
                      const char* inDeviceUID,
                      const char* inModelUID,
                      AudioObjectID inInputStreamID,
-                     AudioObjectID inOutputStreamID);
+                     AudioObjectID inOutputStreamID,
+                     AudioObjectID inVolumeControlID);
     
     virtual ~SSChatMix_Device();
     

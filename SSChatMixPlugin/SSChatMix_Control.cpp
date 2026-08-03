@@ -6,15 +6,20 @@
 //
 
 #include "SSChatMix_Control.h"
+#include <CoreAudio/AudioHardwareBase.h>
 #include <os/log.h>
 
 // MARK: - Constructor/Destructor
 
 SSChatMix_Control::SSChatMix_Control(AudioObjectID inObjectID,
-                                     AudioObjectID inOwnerDeviceID)
+                                     AudioObjectID inOwnerDeviceID,
+                                     AudioObjectPropertyScope inScope,
+                                     AudioObjectPropertyElement inElement)
 :
-    SSChatMix_Object(inObjectID, kAudioControlClassID, kAudioObjectClassID, inOwnerDeviceID),
-    mVolume(1.0f)
+    SSChatMix_Object(inObjectID, kAudioVolumeControlClassID, kAudioLevelControlClassID, inOwnerDeviceID),
+    mVolume(1.0f),
+    mScope(inScope),
+    mElement(inElement)
 {
 }
 
@@ -43,10 +48,9 @@ bool SSChatMix_Control::HasProperty(AudioObjectID inObjectID,
     bool theAnswer = false;
     
     switch (inAddress->mSelector) {
-        case kAudioVolumeControlPropertyIsOwnedByDevice:
-        case kAudioVolumeControlPropertyChannel:
-        case kAudioVolumeControlPropertyScalarValue:
-        case kAudioVolumeControlPropertyNumericValue:
+        case kAudioControlPropertyScope:
+        case kAudioControlPropertyElement:
+        case kAudioLevelControlPropertyScalarValue:
             theAnswer = true;
             break;
             
@@ -66,12 +70,12 @@ bool SSChatMix_Control::IsPropertySettable(AudioObjectID inObjectID,
     bool theAnswer = false;
     
     switch (inAddress->mSelector) {
-        case kAudioVolumeControlPropertyChannel:
+        case kAudioControlPropertyScope:
+        case kAudioControlPropertyElement:
             theAnswer = false;
             break;
             
-        case kAudioVolumeControlPropertyScalarValue:
-        case kAudioVolumeControlPropertyNumericValue:
+        case kAudioLevelControlPropertyScalarValue:
             theAnswer = true;
             break;
             
@@ -93,20 +97,16 @@ UInt32 SSChatMix_Control::GetPropertyDataSize(AudioObjectID inObjectID,
     UInt32 theAnswer = 0;
     
     switch (inAddress->mSelector) {
-        case kAudioVolumeControlPropertyIsOwnedByDevice:
-            theAnswer = sizeof(UInt32);
+        case kAudioControlPropertyScope:
+            theAnswer = sizeof(AudioObjectPropertyScope);
             break;
             
-        case kAudioVolumeControlPropertyChannel:
-            theAnswer = sizeof(AudioVolumeControlChannelInfo);
+        case kAudioControlPropertyElement:
+            theAnswer = sizeof(AudioObjectPropertyElement);
             break;
             
-        case kAudioVolumeControlPropertyScalarValue:
+        case kAudioLevelControlPropertyScalarValue:
             theAnswer = sizeof(Float32);
-            break;
-            
-        case kAudioVolumeControlPropertyNumericValue:
-            theAnswer = sizeof(AudioValueRange);
             break;
             
         default:
@@ -131,28 +131,19 @@ OSStatus SSChatMix_Control::GetPropertyData(AudioObjectID inObjectID,
     OSStatus result = kAudioHardwareNoError;
     
     switch (inAddress->mSelector) {
-        case kAudioVolumeControlPropertyIsOwnedByDevice:
-            *reinterpret_cast<UInt32*>(outData) = 1;
-            outDataSize = sizeof(UInt32);
+        case kAudioControlPropertyScope:
+            *reinterpret_cast<AudioObjectPropertyScope*>(outData) = mScope;
+            outDataSize = sizeof(AudioObjectPropertyScope);
             break;
             
-        case kAudioVolumeControlPropertyChannel: {
-            AudioVolumeControlChannelInfo* channelInfo = reinterpret_cast<AudioVolumeControlChannelInfo*>(outData);
-            channelInfo->mChannel = 0;
-            channelInfo->mFlags = kAudioVolumeControlChannelFlagsHiFi;
-            outDataSize = sizeof(AudioVolumeControlChannelInfo);
+        case kAudioControlPropertyElement:
+            *reinterpret_cast<AudioObjectPropertyElement*>(outData) = mElement;
+            outDataSize = sizeof(AudioObjectPropertyElement);
             break;
-        }
             
-        case kAudioVolumeControlPropertyScalarValue:
+        case kAudioLevelControlPropertyScalarValue:
             *reinterpret_cast<Float32*>(outData) = mVolume;
             outDataSize = sizeof(Float32);
-            break;
-            
-        case kAudioVolumeControlPropertyNumericValue:
-            reinterpret_cast<AudioValueRange*>(outData)->mMinimum = 0.0f;
-            reinterpret_cast<AudioValueRange*>(outData)->mMaximum = 1.0f;
-            outDataSize = sizeof(AudioValueRange);
             break;
             
         default:
@@ -175,21 +166,9 @@ void SSChatMix_Control::SetPropertyData(AudioObjectID inObjectID,
     #pragma unused(inObjectID, inClientProcessID, inQualifierDataSize, inQualifierData, inDataSize)
     
     switch (inAddress->mSelector) {
-        case kAudioVolumeControlPropertyScalarValue:
+        case kAudioLevelControlPropertyScalarValue:
             if (inDataSize >= sizeof(Float32)) {
                 SetVolume(*reinterpret_cast<const Float32*>(inData));
-            }
-            break;
-            
-        case kAudioVolumeControlPropertyNumericValue:
-            if (inDataSize >= sizeof(AudioValueRange)) {
-                Float32 numericValue = *reinterpret_cast<const Float32*>(inData);
-                AudioValueRange range;
-                range.mMinimum = 0.0f;
-                range.mMaximum = 1.0f;
-                // Convert numeric value to scalar
-                Float32 scalar = (numericValue - range.mMinimum) / (range.mMaximum - range.mMinimum);
-                SetVolume(scalar);
             }
             break;
             
