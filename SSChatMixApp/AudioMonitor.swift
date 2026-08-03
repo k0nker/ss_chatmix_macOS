@@ -57,7 +57,7 @@ public class AudioMonitor {
     public func start() throws {
         guard !isRunning else { return }
         
-        print("🎚️  Starting audio monitoring...")
+        print("Starting audio monitoring...")
         print("   Game input: Device \(gameDeviceID)")
         print("   Chat input: Device \(chatDeviceID)")
         print("   Output: Device \(outputDeviceID)")
@@ -66,10 +66,10 @@ public class AudioMonitor {
         #if os(macOS)
         if #available(macOS 14.0, *) {
             let status = AVCaptureDevice.authorizationStatus(for: .audio)
-            print("🎤 Microphone permission status: \(status.rawValue)")
+            print("Microphone permission status: \(status.rawValue)")
             
             if status == .notDetermined {
-                print("🎤 Requesting microphone permission...")
+                print("Requesting microphone permission...")
                 // Request permission - this will show system dialog
                 let semaphore = DispatchSemaphore(value: 0)
                 var granted = false
@@ -80,19 +80,19 @@ public class AudioMonitor {
                 semaphore.wait()
                 
                 if granted {
-                    print("✅ Microphone permission granted")
+                    print("Microphone permission granted")
                 } else {
-                    print("❌ Microphone permission denied - audio capture will not work")
+                    print("Microphone permission denied - audio capture will not work")
                     throw AudioMonitorError.permissionDenied
                 }
             } else if status != .authorized {
-                print("⚠️  WARNING: Microphone permission not granted!")
+                print("WARNING: Microphone permission not granted!")
                 print("   Menu bar apps need this even for virtual devices")
                 print("   Go to System Settings > Privacy & Security > Microphone")
                 print("   Then restart the app")
                 throw AudioMonitorError.permissionDenied
             } else {
-                print("✅ Microphone permission already authorized")
+                print("Microphone permission already authorized")
             }
         }
         #endif
@@ -108,7 +108,7 @@ public class AudioMonitor {
         try startAudioUnit(outputUnit!)
         
         isRunning = true
-        print("✅ Audio monitoring started\n")
+        print("Audio monitoring started\n")
     }
     
     public func stop() {

@@ -140,13 +140,13 @@ struct SettingsView: View {
         do {
             if enabled {
                 try SMAppService.mainApp.register()
-                print("✅ Login item enabled")
+                print("Login item enabled")
             } else {
                 try SMAppService.mainApp.unregister()
-                print("❌ Login item disabled")
+                print("Login item disabled")
             }
         } catch {
-            print("⚠️ Failed to set login item: \(error)")
+            print("Failed to set login item: \(error)")
         }
     }
     

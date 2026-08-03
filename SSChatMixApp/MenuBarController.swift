@@ -55,18 +55,18 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         if configManager.exists() {
             do {
                 config = try configManager.load()
-                print("✅ Loaded config from: \(configManager.getConfigPath())")
+                print("Loaded config from: \(configManager.getConfigPath())")
                 print("   Game: \(config!.audioDevices.game.name)")
                 print("   Chat: \(config!.audioDevices.chat.name)")
                 print("   Output: \(config!.outputDeviceUid ?? "not set")")
                 print("   HID: \(config!.hidDevice.vendorId):\(config!.hidDevice.productId)")
                 startController()
             } catch {
-                print("❌ Failed to load config: \(error)")
-                statusMessage = "⚠️ Config error"
+                print("Config error: \(error)")
+                statusMessage = "Config error"
             }
         } else {
-            print("ℹ️ No config file found at: \(configManager.getConfigPath())")
+            print("No config file found at: \(configManager.getConfigPath())")
             print("   Select devices from menu to configure")
         }
     }
@@ -105,26 +105,26 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 $0.vendorID == vendorID && $0.productID == productID
             }
             if selectedChatMixDevice == nil {
-                print("⚠️ ChatMix device not found in available list: VID=\(String(format: "0x%04X", vendorID)) PID=\(String(format: "0x%04X", productID))")
+                print("ChatMix device not found in available list: VID=\(String(format: "0x%04X", vendorID)) PID=\(String(format: "0x%04X", productID))")
             }
         }
         
         // Find selected audio devices
         selectedGameDevice = availableAudioDevices.first { $0.uid == config.audioDevices.game.uid }
         if selectedGameDevice == nil {
-            print("⚠️ Game device not found: \(config.audioDevices.game.uid)")
+            print("Game device not found: \(config.audioDevices.game.uid)")
             print("   Available devices: \(availableAudioDevices.map { $0.uid }.joined(separator: ", "))")
         }
         
         selectedChatDevice = availableAudioDevices.first { $0.uid == config.audioDevices.chat.uid }
         if selectedChatDevice == nil {
-            print("⚠️ Chat device not found: \(config.audioDevices.chat.uid)")
+            print("Chat device not found: \(config.audioDevices.chat.uid)")
         }
         
         if let outputUID = config.outputDeviceUid {
             selectedOutputDevice = availableAudioDevices.first { $0.uid == outputUID }
             if selectedOutputDevice == nil {
-                print("⚠️ Output device not found: \(outputUID)")
+                print("Output device not found: \(outputUID)")
             }
         } else {
             selectedOutputDevice = nil
@@ -138,9 +138,41 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         menu.addItem(NSMenuItem(title: "SSChatMix", action: nil, keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         
-        // Status
+        // Status with icon
         let statusMenuItem = NSMenuItem(title: statusMessage, action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
+        
+        // Add appropriate icon based on status
+        if isRunning {
+            statusMenuItem.image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: "Running")
+            statusMenuItem.image?.isTemplate = false
+            if let image = statusMenuItem.image {
+                let tinted = image.withSymbolConfiguration(.init(paletteColors: [.systemGreen]))
+                statusMenuItem.image = tinted
+            }
+        } else if statusMessage.contains("permission") {
+            statusMenuItem.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: "Warning")
+            statusMenuItem.image?.isTemplate = false
+            if let image = statusMenuItem.image {
+                let tinted = image.withSymbolConfiguration(.init(paletteColors: [.systemYellow]))
+                statusMenuItem.image = tinted
+            }
+        } else if statusMessage.contains("not found") || statusMessage.contains("Error") {
+            statusMenuItem.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Error")
+            statusMenuItem.image?.isTemplate = false
+            if let image = statusMenuItem.image {
+                let tinted = image.withSymbolConfiguration(.init(paletteColors: [.systemRed]))
+                statusMenuItem.image = tinted
+            }
+        } else {
+            statusMenuItem.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: "Status")
+            statusMenuItem.image?.isTemplate = false
+            if let image = statusMenuItem.image {
+                let tinted = image.withSymbolConfiguration(.init(paletteColors: [.systemGray]))
+                statusMenuItem.image = tinted
+            }
+        }
+        
         menu.addItem(statusMenuItem)
         menu.addItem(NSMenuItem.separator())
         
@@ -304,7 +336,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     
     func startController() {
         guard let config = config else {
-            statusMessage = "⚙️ Not configured"
+            statusMessage = "Not configured"
             return
         }
         
@@ -314,25 +346,25 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         do {
             // Find audio devices
             guard let gameDeviceID = try audioController.findDevice(byUID: config.audioDevices.game.uid) else {
-                statusMessage = "❌ Game device not found"
-                print("❌ Game device not found: \(config.audioDevices.game.uid)")
+                statusMessage = "Game device not found"
+                print("Game device not found: \(config.audioDevices.game.uid)")
                 return
             }
             
             guard let chatDeviceID = try audioController.findDevice(byUID: config.audioDevices.chat.uid) else {
-                statusMessage = "❌ Chat device not found"
-                print("❌ Chat device not found: \(config.audioDevices.chat.uid)")
+                statusMessage = "Chat device not found"
+                print("Chat device not found: \(config.audioDevices.chat.uid)")
                 return
             }
             
             guard let outputUID = config.outputDeviceUid,
                   let outputDeviceID = try audioController.findDevice(byUID: outputUID) else {
-                statusMessage = "❌ Output device not found"
-                print("❌ Output device not found: \(config.outputDeviceUid ?? "nil")")
+                statusMessage = "Output device not found"
+                print("Output device not found: \(config.outputDeviceUid ?? "nil")")
                 return
             }
             
-            print("🎚️  Starting audio monitoring...")
+            print("Starting audio monitoring...")
             print("   Game input: Device \(gameDeviceID)")
             print("   Chat input: Device \(chatDeviceID)")
             print("   Output: Device \(outputDeviceID)")
@@ -341,7 +373,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             let vendorID = Int(config.hidDevice.vendorId.dropFirst(2), radix: 16) ?? 0x1038
             let productID = Int(config.hidDevice.productId.dropFirst(2), radix: 16) ?? 0x2202
             
-            print("🎮 Configuring HID controller...")
+            print("Configuring HID controller...")
             print("   VendorID: \(String(format: "0x%04X", vendorID))")
             print("   ProductID: \(String(format: "0x%04X", productID))")
             
@@ -357,7 +389,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             try monitor.start()
             audioMonitor = monitor
             
-            print("✅ Audio monitoring started")
+            print("Audio monitoring started")
             
             // Set up HID callback
             hidController?.onDialChanged = { [weak self, weak monitor] gameVol, chatVol in
@@ -375,23 +407,23 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             }
             
             // Start listening
-            print("🎮 Starting HID controller...")
+            print("Starting HID controller...")
             try hidController?.start()
-            print("✅ HID controller started")
+            print("HID controller started")
             
             isRunning = true
-            statusMessage = "✅ Running"
+            statusMessage = "Running"
             
             // Update menu to show new status
             updateMenu()
             
             print("")
-            print("✅ ChatMix Controller started")
+            print("ChatMix Controller started")
             print("   Move the dial to test...")
             
         } catch AudioMonitorError.permissionDenied {
-            print("❌ Microphone permission denied")
-            statusMessage = "🎤 Microphone permission required"
+            print("Microphone permission denied")
+            statusMessage = "Microphone permission required"
             isRunning = false
             
             // Show alert to user
@@ -412,8 +444,8 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 }
             }
         } catch {
-            print("❌ Controller start failed: \(error)")
-            statusMessage = "❌ Error: \(error.localizedDescription)"
+            print("Controller start failed: \(error)")
+            statusMessage = "Error: \(error.localizedDescription)"
             isRunning = false
         }
     }
@@ -616,7 +648,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         
         do {
             try configManager.save(config)
-            print("✅ Config saved to: \(configManager.getConfigPath())")
+            print("Config saved to: \(configManager.getConfigPath())")
             print("   Game: \(config.audioDevices.game.name)")
             print("   Chat: \(config.audioDevices.chat.name)")
             print("   Output: \(config.outputDeviceUid ?? "not set")")
@@ -629,8 +661,8 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             startController()
             updateMenu()
         } catch {
-            print("❌ Failed to save config: \(error)")
-            statusMessage = "❌ Failed to save config"
+            print("Failed to save config: \(error)")
+            statusMessage = "Failed to save config"
         }
     }
     
@@ -648,7 +680,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             do {
                 audioDevices = try self.audioController.listOutputDevices()
             } catch {
-                print("⚠️ Failed to load audio devices: \(error)")
+                print("Failed to load audio devices: \(error)")
             }
             
             // Update on main thread (batched to minimize blocking)

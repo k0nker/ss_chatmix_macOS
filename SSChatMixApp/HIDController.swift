@@ -123,10 +123,10 @@ public class HIDController {
     public func start() throws {
         // First check if device is detectable
         if !detectDevice() {
-            print("⚠️  HID device not detected - VID: \(String(format: "0x%04X", vendorID)) PID: \(String(format: "0x%04X", productID))")
+            print("HID device not detected - VID: \(String(format: "0x%04X", vendorID)) PID: \(String(format: "0x%04X", productID))")
             print("   This might be normal if the device hasn't been plugged in yet")
         } else {
-            print("✅ HID device detected")
+            print("HID device detected")
         }
         
         manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
@@ -192,7 +192,7 @@ public class HIDController {
         let dataPtr = IOHIDValueGetBytePtr(value)
         
         guard dataLength >= 3 else { 
-            print("⚠️  HID report too short: \(dataLength) bytes")
+            print("HID report too short: \(dataLength) bytes")
             return 
         }
         
@@ -218,7 +218,7 @@ public class HIDController {
         } else {
             // Log unexpected report IDs (but only once per ID to avoid spam)
             if !loggedReportIDs.contains(reportID) {
-                print("ℹ️  HID report with ID \(String(format: "0x%02X", reportID)) (expected 0x45)")
+                print("HID report with ID \(String(format: "0x%02X", reportID)) (expected 0x45)")
                 loggedReportIDs.insert(reportID)
             }
         }
