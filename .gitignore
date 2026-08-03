@@ -14,6 +14,7 @@ config.json
 .vscode
 Planning
 Reference
+.claude/
 
 # Distribution & Build (sensitive/local)
 DISTRIBUTION.md
