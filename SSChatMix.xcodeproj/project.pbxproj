@@ -16,6 +16,10 @@
 		A1012B89301FE7BA0016B995 /* HIDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B83301FE7BA0016B995 /* HIDController.swift */; };
 		A1012B8A301FE7BA0016B995 /* SSChatMixApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B84301FE7BA0016B995 /* SSChatMixApp.swift */; };
 		A1ASSETS001234560099A3FA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1ASSETS001234550099A3FA /* Assets.xcassets */; };
+		A1B271DE3020718400DFA33E /* SSChatMixPlugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1B271DD3020718400DFA33E /* SSChatMixPlugin.cpp */; };
+		A1B271DF3020718400DFA33E /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1B271DB3020718400DFA33E /* Info.plist */; };
+		A1B271E23020727E00DFA33E /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B271E13020727E00DFA33E /* CoreAudio.framework */; };
+		A1B271E43020728500DFA33E /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B271E33020728500DFA33E /* CoreFoundation.framework */; };
 		A1B4E65F30204F3F0099A3FA /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A1B4E65E30204F3F0099A3FA /* Sparkle */; };
 		A1C9F8E130205A1D0099A3FA /* SparkleUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C9F8E030205A1D0099A3FA /* SparkleUpdater.swift */; };
 /* End PBXBuildFile section */
@@ -31,6 +35,12 @@
 		A1012B84301FE7BA0016B995 /* SSChatMixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSChatMixApp.swift; sourceTree = "<group>"; };
 		A1AFADB1301FE026001ED19B /* SSChatMix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SSChatMix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1ASSETS001234550099A3FA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1B271D73020708400DFA33E /* SSChatMixPlugin.driver */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SSChatMixPlugin.driver; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B271DB3020718400DFA33E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = SSChatMixPlugin/Info.plist; sourceTree = "<group>"; };
+		A1B271DC3020718400DFA33E /* SSChatMixPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SSChatMixPlugin.h; path = SSChatMixPlugin/SSChatMixPlugin.h; sourceTree = "<group>"; };
+		A1B271DD3020718400DFA33E /* SSChatMixPlugin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SSChatMixPlugin.cpp; path = SSChatMixPlugin/SSChatMixPlugin.cpp; sourceTree = "<group>"; };
+		A1B271E13020727E00DFA33E /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		A1B271E33020728500DFA33E /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		A1C9F8E030205A1D0099A3FA /* SparkleUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdater.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -39,6 +49,13 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				A1B4E65F30204F3F0099A3FA /* Sparkle in Frameworks */,
+			);
+		};
+		A1B271D43020708400DFA33E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				A1B271E43020728500DFA33E /* CoreFoundation.framework in Frameworks */,
+				A1B271E23020727E00DFA33E /* CoreAudio.framework in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -74,6 +91,10 @@
 			children = (
 				A1012B72301FE0CC0016B995 /* SSChatMixApp */,
 				A1AFADB2301FE026001ED19B /* Products */,
+				A1B271DB3020718400DFA33E /* Info.plist */,
+				A1B271DC3020718400DFA33E /* SSChatMixPlugin.h */,
+				A1B271DD3020718400DFA33E /* SSChatMixPlugin.cpp */,
+				A1B271E03020727E00DFA33E /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -81,8 +102,18 @@
 			isa = PBXGroup;
 			children = (
 				A1AFADB1301FE026001ED19B /* SSChatMix.app */,
+				A1B271D73020708400DFA33E /* SSChatMixPlugin.driver */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A1B271E03020727E00DFA33E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A1B271E33020728500DFA33E /* CoreFoundation.framework */,
+				A1B271E13020727E00DFA33E /* CoreAudio.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -106,6 +137,21 @@
 			productReference = A1AFADB1301FE026001ED19B /* SSChatMix.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A1B271D63020708400DFA33E /* SSChatMixPlugin */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B271DA3020708400DFA33E /* Build configuration list for PBXNativeTarget "SSChatMixPlugin" */;
+			buildPhases = (
+				A1B271D33020708400DFA33E /* Sources */,
+				A1B271D43020708400DFA33E /* Frameworks */,
+				A1B271D53020708400DFA33E /* Resources */,
+			);
+			buildRules = (
+			);
+			name = SSChatMixPlugin;
+			productName = SSChatMixPlugin;
+			productReference = A1B271D73020708400DFA33E /* SSChatMixPlugin.driver */;
+			productType = "com.apple.product-type.bundle";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -117,6 +163,9 @@
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					A1AFADB0301FE026001ED19B = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					A1B271D63020708400DFA33E = {
 						CreatedOnToolsVersion = 26.6;
 					};
 				};
@@ -139,6 +188,7 @@
 			projectRoot = "";
 			targets = (
 				A1AFADB0301FE026001ED19B /* SSChatMix */,
+				A1B271D63020708400DFA33E /* SSChatMixPlugin */,
 			);
 		};
 /* End PBXProject section */
@@ -148,6 +198,12 @@
 			isa = PBXResourcesBuildPhase;
 			files = (
 				A1ASSETS001234560099A3FA /* Assets.xcassets in Resources */,
+			);
+		};
+		A1B271D53020708400DFA33E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+				A1B271DF3020718400DFA33E /* Info.plist in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
@@ -165,6 +221,12 @@
 				A1012B8A301FE7BA0016B995 /* SSChatMixApp.swift in Sources */,
 				A1012B7E301FE5920016B995 /* MenuBarController.swift in Sources */,
 				A1C9F8E130205A1D0099A3FA /* SparkleUpdater.swift in Sources */,
+			);
+		};
+		A1B271D33020708400DFA33E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				A1B271DE3020718400DFA33E /* SSChatMixPlugin.cpp in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
@@ -308,6 +370,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -343,6 +406,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -362,6 +426,52 @@
 			};
 			name = Release;
 		};
+		A1B271D83020708400DFA33E /* Debug configuration for PBXNativeTarget "SSChatMixPlugin" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 69SD3NQCD8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SSChatMixPlugin/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MARKETING_VERSION = 1.0;
+				OTHER_CODE_SIGN_FLAGS = "--options=library --options=runtime";
+				PRODUCT_BUNDLE_IDENTIFIER = com.k0nker.SSChatMixPlugin;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				WRAPPER_EXTENSION = driver;
+			};
+			name = Debug;
+		};
+		A1B271D93020708400DFA33E /* Release configuration for PBXNativeTarget "SSChatMixPlugin" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 69SD3NQCD8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SSChatMixPlugin/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MARKETING_VERSION = 1.0;
+				OTHER_CODE_SIGN_FLAGS = "--options=library --options=runtime";
+				PRODUCT_BUNDLE_IDENTIFIER = com.k0nker.SSChatMixPlugin;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				WRAPPER_EXTENSION = driver;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -378,6 +488,14 @@
 			buildConfigurations = (
 				A1AFADBD301FE028001ED19B /* Debug configuration for PBXNativeTarget "SSChatMix" */,
 				A1AFADBE301FE028001ED19B /* Release configuration for PBXNativeTarget "SSChatMix" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		A1B271DA3020708400DFA33E /* Build configuration list for PBXNativeTarget "SSChatMixPlugin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B271D83020708400DFA33E /* Debug configuration for PBXNativeTarget "SSChatMixPlugin" */,
+				A1B271D93020708400DFA33E /* Release configuration for PBXNativeTarget "SSChatMixPlugin" */,
 			);
 			defaultConfigurationName = Release;
 		};
