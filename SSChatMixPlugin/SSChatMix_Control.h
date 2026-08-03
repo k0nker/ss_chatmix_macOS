@@ -15,7 +15,9 @@
 class SSChatMix_Control : public SSChatMix_Object {
 public:
     SSChatMix_Control(AudioObjectID inObjectID,
-                      AudioObjectID inOwnerDeviceID);
+                      AudioObjectID inOwnerDeviceID,
+                      AudioObjectPropertyScope inScope,
+                      AudioObjectPropertyElement inElement);
     
     virtual ~SSChatMix_Control();
     
@@ -57,6 +59,8 @@ public:
 
 private:
     Float32 mVolume;
+    AudioObjectPropertyScope mScope;
+    AudioObjectPropertyElement mElement;
 };
 
 #endif /* SSChatMix_Control_h */

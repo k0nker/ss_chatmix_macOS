@@ -16,14 +16,15 @@ SSChatMix_Device::SSChatMix_Device(AudioObjectID inObjectID,
                                    const char* inDeviceUID,
                                    const char* inModelUID,
                                    AudioObjectID inInputStreamID,
-                                   AudioObjectID inOutputStreamID)
+                                   AudioObjectID inOutputStreamID,
+                                   AudioObjectID inVolumeControlID)
 :
     SSChatMix_Object(inObjectID, kAudioDeviceClassID, kAudioObjectClassID, kAudioObjectPlugInObject),
     mDeviceName(inDeviceName),
     mDeviceUID(inDeviceUID),
     mInputStream(inInputStreamID, inObjectID, false, kSSChatMix_SampleRate),
     mOutputStream(inOutputStreamID, inObjectID, false, kSSChatMix_SampleRate),
-    mVolumeControl(kObjectID_VolumeControl, inObjectID),
+    mVolumeControl(inVolumeControlID, inObjectID, kAudioObjectPropertyScopeOutput, kAudioObjectPropertyElementMain),
     mHostTicksPerFrame(0.0),
     mAnchorHostTime(0),
     mAnchorSampleTime(0.0),
@@ -75,7 +76,16 @@ bool SSChatMix_Device::IsIORunning() const {
 bool SSChatMix_Device::HasProperty(AudioObjectID inObjectID,
                                    pid_t inClientProcessID,
                                    const AudioObjectPropertyAddress* inAddress) const {
-    #pragma unused(inObjectID, inClientProcessID)
+    #pragma unused(inClientProcessID)
+    
+    // Delegate to child objects (streams, controls)
+    if (inObjectID == mInputStream.GetObjectID()) {
+        return mInputStream.HasProperty(inObjectID, inClientProcessID, inAddress);
+    } else if (inObjectID == mOutputStream.GetObjectID()) {
+        return mOutputStream.HasProperty(inObjectID, inClientProcessID, inAddress);
+    } else if (inObjectID == mVolumeControl.GetObjectID()) {
+        return mVolumeControl.HasProperty(inObjectID, inClientProcessID, inAddress);
+    }
     
     bool theAnswer = false;
     
@@ -118,7 +128,16 @@ bool SSChatMix_Device::HasProperty(AudioObjectID inObjectID,
 bool SSChatMix_Device::IsPropertySettable(AudioObjectID inObjectID,
                                           pid_t inClientProcessID,
                                           const AudioObjectPropertyAddress* inAddress) const {
-    #pragma unused(inObjectID, inClientProcessID)
+    #pragma unused(inClientProcessID)
+    
+    // Delegate to child objects (streams, controls)
+    if (inObjectID == mInputStream.GetObjectID()) {
+        return mInputStream.IsPropertySettable(inObjectID, inClientProcessID, inAddress);
+    } else if (inObjectID == mOutputStream.GetObjectID()) {
+        return mOutputStream.IsPropertySettable(inObjectID, inClientProcessID, inAddress);
+    } else if (inObjectID == mVolumeControl.GetObjectID()) {
+        return mVolumeControl.IsPropertySettable(inObjectID, inClientProcessID, inAddress);
+    }
     
     bool theAnswer = false;
     
@@ -166,7 +185,19 @@ UInt32 SSChatMix_Device::GetPropertyDataSize(AudioObjectID inObjectID,
                                              const AudioObjectPropertyAddress* inAddress,
                                              UInt32 inQualifierDataSize,
                                              const void* inQualifierData) const {
-    #pragma unused(inObjectID, inClientProcessID, inQualifierDataSize, inQualifierData)
+    #pragma unused(inClientProcessID, inQualifierDataSize, inQualifierData)
+    
+    // Delegate to child objects (streams, controls)
+    if (inObjectID == mInputStream.GetObjectID()) {
+        return mInputStream.GetPropertyDataSize(inObjectID, inClientProcessID, inAddress,
+                                                 inQualifierDataSize, inQualifierData);
+    } else if (inObjectID == mOutputStream.GetObjectID()) {
+        return mOutputStream.GetPropertyDataSize(inObjectID, inClientProcessID, inAddress,
+                                                  inQualifierDataSize, inQualifierData);
+    } else if (inObjectID == mVolumeControl.GetObjectID()) {
+        return mVolumeControl.GetPropertyDataSize(inObjectID, inClientProcessID, inAddress,
+                                                   inQualifierDataSize, inQualifierData);
+    }
     
     UInt32 theAnswer = 0;
     
@@ -202,10 +233,19 @@ UInt32 SSChatMix_Device::GetPropertyDataSize(AudioObjectID inObjectID,
             break;
             
         case kAudioObjectPropertyControlList:
-            theAnswer = 0;
+            theAnswer = sizeof(AudioObjectID);
             break;
             
         case kAudioObjectPropertyOwnedObjects:
+            if (inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
+                theAnswer = 3 * sizeof(AudioObjectID);
+            } else if (inAddress->mScope == kAudioObjectPropertyScopeOutput) {
+                theAnswer = 2 * sizeof(AudioObjectID);
+            } else {
+                theAnswer = sizeof(AudioObjectID);
+            }
+            break;
+            
         case kAudioDevicePropertyStreams:
             if (inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
                 theAnswer = 2 * sizeof(AudioObjectID);
@@ -243,7 +283,29 @@ OSStatus SSChatMix_Device::GetPropertyData(AudioObjectID inObjectID,
                                            UInt32 inDataSize,
                                            UInt32& outDataSize,
                                            void* outData) const {
-    #pragma unused(inObjectID, inClientProcessID, inQualifierDataSize, inQualifierData, inDataSize)
+    #pragma unused(inClientProcessID, inQualifierDataSize, inQualifierData, inDataSize)
+    
+    // Delegate to child objects (streams, controls)
+    if (inObjectID == mInputStream.GetObjectID()) {
+        return mInputStream.GetPropertyData(inObjectID, inClientProcessID, inAddress,
+                                             inQualifierDataSize, inQualifierData,
+                                             inDataSize, outDataSize, outData);
+    } else if (inObjectID == mOutputStream.GetObjectID()) {
+        return mOutputStream.GetPropertyData(inObjectID, inClientProcessID, inAddress,
+                                              inQualifierDataSize, inQualifierData,
+                                              inDataSize, outDataSize, outData);
+    } else if (inObjectID == mVolumeControl.GetObjectID()) {
+        return mVolumeControl.GetPropertyData(inObjectID, inClientProcessID, inAddress,
+                                               inQualifierDataSize, inQualifierData,
+                                               inDataSize, outDataSize, outData);
+    }
+    
+    // Log property queries to help debug
+    char selectorStr[5];
+    *((UInt32*)selectorStr) = CFSwapInt32HostToBig(inAddress->mSelector);
+    selectorStr[4] = '\0';
+    os_log(OS_LOG_DEFAULT, "SSChatMix_Device::GetPropertyData: %s scope=%u elem=%u", 
+           selectorStr, inAddress->mScope, inAddress->mElement);
     
     OSStatus result = kAudioHardwareNoError;
     
@@ -325,10 +387,28 @@ OSStatus SSChatMix_Device::GetPropertyData(AudioObjectID inObjectID,
             break;
             
         case kAudioObjectPropertyControlList:
-            outDataSize = 0;
+            *reinterpret_cast<AudioObjectID*>(outData) = mVolumeControl.GetObjectID();
+            outDataSize = sizeof(AudioObjectID);
             break;
             
         case kAudioObjectPropertyOwnedObjects:
+            if (inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
+                reinterpret_cast<AudioObjectID*>(outData)[0] = mInputStream.GetObjectID();
+                reinterpret_cast<AudioObjectID*>(outData)[1] = mOutputStream.GetObjectID();
+                reinterpret_cast<AudioObjectID*>(outData)[2] = mVolumeControl.GetObjectID();
+                outDataSize = 3 * sizeof(AudioObjectID);
+            } else if (inAddress->mScope == kAudioObjectPropertyScopeInput) {
+                *reinterpret_cast<AudioObjectID*>(outData) = mInputStream.GetObjectID();
+                outDataSize = sizeof(AudioObjectID);
+            } else if (inAddress->mScope == kAudioObjectPropertyScopeOutput) {
+                reinterpret_cast<AudioObjectID*>(outData)[0] = mOutputStream.GetObjectID();
+                reinterpret_cast<AudioObjectID*>(outData)[1] = mVolumeControl.GetObjectID();
+                outDataSize = 2 * sizeof(AudioObjectID);
+            } else {
+                outDataSize = 0;
+            }
+            break;
+            
         case kAudioDevicePropertyStreams:
             if (inAddress->mScope == kAudioObjectPropertyScopeInput || inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
                 *reinterpret_cast<AudioObjectID*>(outData) = mInputStream.GetObjectID();

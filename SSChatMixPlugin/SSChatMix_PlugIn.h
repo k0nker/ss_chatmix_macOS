@@ -19,7 +19,7 @@ public:
     virtual ~SSChatMix_PlugIn();
     
     // Static initialization (thread-safe singleton)
-    static void StaticInitialize(AudioServerPlugInHostRef inHost);
+    static void SetHost(AudioServerPlugInHostRef inHost);
     static SSChatMix_PlugIn& GetInstance();
     
     // Accessors
