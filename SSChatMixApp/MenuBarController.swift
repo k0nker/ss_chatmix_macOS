@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import Combine
 
-class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
+class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject, NSMenuDelegate {
     var statusItem: NSStatusItem!
     
     // Core components running in-process
@@ -69,11 +69,6 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             print("ℹ️ No config file found at: \(configManager.getConfigPath())")
             print("   Select devices from menu to configure")
         }
-        
-        // Update menu every second
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.updateMenu()
-        }
     }
     
     func loadAvailableDevices() {
@@ -138,6 +133,9 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     
     func updateMenu() {
         let menu = NSMenu()
+        
+        // Set delegate to refresh menu when opened
+        menu.delegate = self
         
         // Header
         menu.addItem(NSMenuItem(title: "ChatMix Controller", action: nil, keyEquivalent: ""))
@@ -371,17 +369,17 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             
             // Set up HID callback
             hidController?.onDialChanged = { [weak self, weak monitor] gameVol, chatVol in
-                print("🎚️  Dial changed: Game=\(gameVol)% Chat=\(chatVol)%")
-                
-                DispatchQueue.main.async {
-                    self?.gameVolume = gameVol
-                    self?.chatVolume = chatVol
-                }
-                
+                // Update audio volumes immediately (time-critical)
                 monitor?.updateVolumes(
                     game: Float(gameVol) / 100.0,
                     chat: Float(chatVol) / 100.0
                 )
+                
+                // Update UI asynchronously (non-blocking)
+                DispatchQueue.main.async { [weak self] in
+                    self?.gameVolume = gameVol
+                    self?.chatVolume = chatVol
+                }
             }
             
             // Start listening
@@ -695,6 +693,20 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         alert.addButton(withTitle: "OK")
         alert.alertStyle = .informational
         alert.runModal()
+    }
+    
+    // MARK: - NSMenuDelegate
+    
+    func menuWillOpen(_ menu: NSMenu) {
+        // Update volume display in menu items when menu opens
+        // Only update the text, don't rebuild entire menu
+        if let items = menu.items.prefix(5) as? [NSMenuItem], items.count >= 5 {
+            // Items 2 and 3 are the volume displays
+            items[2].title = "🎮 Game: \(gameVolume)%"
+            items[3].title = "💬 Chat: \(chatVolume)%"
+            // Item 4 is status
+            items[4].title = statusMessage
+        }
     }
     
     @objc func quit() {
