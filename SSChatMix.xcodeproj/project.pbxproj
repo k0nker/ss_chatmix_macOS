@@ -15,9 +15,14 @@
 		A1012B88301FE7BA0016B995 /* ConfigManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B82301FE7BA0016B995 /* ConfigManager.swift */; };
 		A1012B89301FE7BA0016B995 /* HIDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B83301FE7BA0016B995 /* HIDController.swift */; };
 		A1012B8A301FE7BA0016B995 /* SSChatMixApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B84301FE7BA0016B995 /* SSChatMixApp.swift */; };
+		A122D40930209BF100000BF4 /* SSChatMix_Control.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D3FD30209BF100000BF4 /* SSChatMix_Control.cpp */; };
+		A122D40A30209BF100000BF4 /* SSChatMix_Device.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D3FF30209BF100000BF4 /* SSChatMix_Device.cpp */; };
+		A122D40B30209BF100000BF4 /* SSChatMix_Stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D40530209BF100000BF4 /* SSChatMix_Stream.cpp */; };
+		A122D40C30209BF100000BF4 /* SSChatMixPlugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D40730209BF100000BF4 /* SSChatMixPlugin.cpp */; };
+		A122D40D30209BF100000BF4 /* SSChatMix_Object.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D40130209BF100000BF4 /* SSChatMix_Object.cpp */; };
+		A122D40E30209BF100000BF4 /* SSChatMix_PlugIn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D40330209BF100000BF4 /* SSChatMix_PlugIn.cpp */; };
+		A122D40F30209BF100000BF4 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A122D3FB30209BF100000BF4 /* Info.plist */; };
 		A1ASSETS001234560099A3FA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1ASSETS001234550099A3FA /* Assets.xcassets */; };
-		A1B271DE3020718400DFA33E /* SSChatMixPlugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1B271DD3020718400DFA33E /* SSChatMixPlugin.cpp */; };
-		A1B271DF3020718400DFA33E /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1B271DB3020718400DFA33E /* Info.plist */; };
 		A1B271E23020727E00DFA33E /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B271E13020727E00DFA33E /* CoreAudio.framework */; };
 		A1B271E43020728500DFA33E /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B271E33020728500DFA33E /* CoreFoundation.framework */; };
 		A1B4E65F30204F3F0099A3FA /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A1B4E65E30204F3F0099A3FA /* Sparkle */; };
@@ -33,12 +38,22 @@
 		A1012B82301FE7BA0016B995 /* ConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigManager.swift; sourceTree = "<group>"; };
 		A1012B83301FE7BA0016B995 /* HIDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIDController.swift; sourceTree = "<group>"; };
 		A1012B84301FE7BA0016B995 /* SSChatMixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSChatMixApp.swift; sourceTree = "<group>"; };
+		A122D3FB30209BF100000BF4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A122D3FC30209BF100000BF4 /* SSChatMix_Control.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_Control.h; sourceTree = "<group>"; };
+		A122D3FD30209BF100000BF4 /* SSChatMix_Control.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_Control.cpp; sourceTree = "<group>"; };
+		A122D3FE30209BF100000BF4 /* SSChatMix_Device.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_Device.h; sourceTree = "<group>"; };
+		A122D3FF30209BF100000BF4 /* SSChatMix_Device.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_Device.cpp; sourceTree = "<group>"; };
+		A122D40030209BF100000BF4 /* SSChatMix_Object.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_Object.h; sourceTree = "<group>"; };
+		A122D40130209BF100000BF4 /* SSChatMix_Object.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_Object.cpp; sourceTree = "<group>"; };
+		A122D40230209BF100000BF4 /* SSChatMix_PlugIn.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_PlugIn.h; sourceTree = "<group>"; };
+		A122D40330209BF100000BF4 /* SSChatMix_PlugIn.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_PlugIn.cpp; sourceTree = "<group>"; };
+		A122D40430209BF100000BF4 /* SSChatMix_Stream.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_Stream.h; sourceTree = "<group>"; };
+		A122D40530209BF100000BF4 /* SSChatMix_Stream.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_Stream.cpp; sourceTree = "<group>"; };
+		A122D40630209BF100000BF4 /* SSChatMixPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMixPlugin.h; sourceTree = "<group>"; };
+		A122D40730209BF100000BF4 /* SSChatMixPlugin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMixPlugin.cpp; sourceTree = "<group>"; };
 		A1AFADB1301FE026001ED19B /* SSChatMix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SSChatMix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1ASSETS001234550099A3FA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1B271D73020708400DFA33E /* SSChatMixPlugin.driver */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SSChatMixPlugin.driver; sourceTree = BUILT_PRODUCTS_DIR; };
-		A1B271DB3020718400DFA33E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = SSChatMixPlugin/Info.plist; sourceTree = "<group>"; };
-		A1B271DC3020718400DFA33E /* SSChatMixPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SSChatMixPlugin.h; path = SSChatMixPlugin/SSChatMixPlugin.h; sourceTree = "<group>"; };
-		A1B271DD3020718400DFA33E /* SSChatMixPlugin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SSChatMixPlugin.cpp; path = SSChatMixPlugin/SSChatMixPlugin.cpp; sourceTree = "<group>"; };
 		A1B271E13020727E00DFA33E /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		A1B271E33020728500DFA33E /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		A1C9F8E030205A1D0099A3FA /* SparkleUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdater.swift; sourceTree = "<group>"; };
@@ -86,14 +101,32 @@
 			path = SSChatMixApp;
 			sourceTree = "<group>";
 		};
+		A122D40830209BF100000BF4 /* SSChatMixPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				A122D3FB30209BF100000BF4 /* Info.plist */,
+				A122D3FC30209BF100000BF4 /* SSChatMix_Control.h */,
+				A122D3FD30209BF100000BF4 /* SSChatMix_Control.cpp */,
+				A122D3FE30209BF100000BF4 /* SSChatMix_Device.h */,
+				A122D3FF30209BF100000BF4 /* SSChatMix_Device.cpp */,
+				A122D40030209BF100000BF4 /* SSChatMix_Object.h */,
+				A122D40130209BF100000BF4 /* SSChatMix_Object.cpp */,
+				A122D40230209BF100000BF4 /* SSChatMix_PlugIn.h */,
+				A122D40330209BF100000BF4 /* SSChatMix_PlugIn.cpp */,
+				A122D40430209BF100000BF4 /* SSChatMix_Stream.h */,
+				A122D40530209BF100000BF4 /* SSChatMix_Stream.cpp */,
+				A122D40630209BF100000BF4 /* SSChatMixPlugin.h */,
+				A122D40730209BF100000BF4 /* SSChatMixPlugin.cpp */,
+			);
+			path = SSChatMixPlugin;
+			sourceTree = "<group>";
+		};
 		A1AFADA8301FE026001ED19B = {
 			isa = PBXGroup;
 			children = (
+				A122D40830209BF100000BF4 /* SSChatMixPlugin */,
 				A1012B72301FE0CC0016B995 /* SSChatMixApp */,
 				A1AFADB2301FE026001ED19B /* Products */,
-				A1B271DB3020718400DFA33E /* Info.plist */,
-				A1B271DC3020718400DFA33E /* SSChatMixPlugin.h */,
-				A1B271DD3020718400DFA33E /* SSChatMixPlugin.cpp */,
 				A1B271E03020727E00DFA33E /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -203,7 +236,7 @@
 		A1B271D53020708400DFA33E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
-				A1B271DF3020718400DFA33E /* Info.plist in Resources */,
+				A122D40F30209BF100000BF4 /* Info.plist in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
@@ -226,7 +259,12 @@
 		A1B271D33020708400DFA33E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				A1B271DE3020718400DFA33E /* SSChatMixPlugin.cpp in Sources */,
+				A122D40930209BF100000BF4 /* SSChatMix_Control.cpp in Sources */,
+				A122D40A30209BF100000BF4 /* SSChatMix_Device.cpp in Sources */,
+				A122D40B30209BF100000BF4 /* SSChatMix_Stream.cpp in Sources */,
+				A122D40C30209BF100000BF4 /* SSChatMixPlugin.cpp in Sources */,
+				A122D40D30209BF100000BF4 /* SSChatMix_Object.cpp in Sources */,
+				A122D40E30209BF100000BF4 /* SSChatMix_PlugIn.cpp in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
