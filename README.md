@@ -4,7 +4,7 @@ Native macOS app for SteelSeries Arctis Nova ChatMix dial.
 
 SteelSeries SONAR doesn't work on macOS, which means the ChatMix dial on newer Arctis Nova headsets is useless outside of Windows. This app fixes that.
 
-![macOS Menu Bar App](https://img.shields.io/badge/Platform-macOS%2013.0+-blue)
+![macOS Menu Bar App](https://img.shields.io/badge/Platform-macOS%2015.0+-blue)
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -37,7 +37,7 @@ brew install blackhole-2ch blackhole-16ch
 
 ## Requirements
 
-- macOS 13.0+
+- macOS 15.0+
 - SteelSeries Arctis Nova with ChatMix dial (Nova 7, Nova Pro, etc.)
 - Two virtual audio devices ([BlackHole](https://github.com/ExistentialAudio/BlackHole) recommended)
 
@@ -76,6 +76,7 @@ brew install blackhole-2ch blackhole-16ch
 
 - Set **game apps** to output to your Game Audio device (e.g., BlackHole 16ch)
 - Set **chat apps** (Discord, Zoom, etc.) to output to your Chat Audio device (e.g., BlackHole 2ch)
+- Optional: Set one of the virtual channels as the default sound output to have all audio route to that channel.
 - **Turn the dial** - volumes adjust in real-time!
 
 💡 **Tip:** Use macOS Audio MIDI Setup or per-app audio settings to route audio to virtual devices.
