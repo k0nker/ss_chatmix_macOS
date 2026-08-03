@@ -1,11 +1,16 @@
 import SwiftUI
 import ServiceManagement
 import Sparkle
+import Combine
 
 struct SettingsView: View {
     @ObservedObject var controller: MenuBarController
-    @ObservedObject var updater = SparkleUpdater.shared
+    @ObservedObject private var updater = SparkleUpdaterViewModel.shared
     @AppStorage("launchAtLogin") private var launchAtLogin = false
+    
+    // Throttled volume values to prevent UI overload during rapid dial changes
+    @State private var displayGameVolume: Int = 50
+    @State private var displayChatVolume: Int = 50
     
     var body: some View {
         VStack(spacing: 0) {
@@ -111,14 +116,14 @@ struct SettingsView: View {
                         VolumeBar(
                             icon: "gamecontroller.fill",
                             label: "Game",
-                            value: controller.gameVolume,
+                            value: displayGameVolume,
                             color: .blue
                         )
                         
                         VolumeBar(
                             icon: "message.fill",
                             label: "Chat",
-                            value: controller.chatVolume,
+                            value: displayChatVolume,
                             color: .green
                         )
                     }
@@ -131,22 +136,25 @@ struct SettingsView: View {
                     Divider()
                         .padding(.vertical, 12)
                     
+                    // Updates section
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Updates")
                             .font(.headline)
                         
-                        Toggle("Check for updates automatically", isOn: $updater.isAutomaticallyChecksForUpdates)
-                            .onChange(of: updater.isAutomaticallyChecksForUpdates) { _, newValue in
-                                updater.toggleAutomaticUpdates(newValue)
-                            }
+                        Toggle("Automatically check for updates", isOn: Binding(
+                            get: { updater.automaticallyChecksForUpdates },
+                            set: { updater.setAutomaticallyChecksForUpdates($0) }
+                        ))
+                        .toggleStyle(.switch)
                         
                         Button(action: {
                             updater.checkForUpdates()
                         }) {
-                            Text("Check Now")
+                            Text("Check for Updates...")
                                 .frame(maxWidth: .infinity, alignment: .center)
                         }
                         .buttonStyle(.bordered)
+                        .disabled(!updater.canCheckForUpdates)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -156,6 +164,16 @@ struct SettingsView: View {
         .frame(width: 600, height: 400)
         .onAppear {
             updateLoginItemStatus()
+            // Initialize display volumes
+            displayGameVolume = controller.gameVolume
+            displayChatVolume = controller.chatVolume
+        }
+        // Throttle volume updates to prevent UI overload (max 4 updates/sec instead of 20/sec)
+        .onReceive(controller.$gameVolume.throttle(for: .milliseconds(250), scheduler: RunLoop.main, latest: true)) { newValue in
+            displayGameVolume = newValue
+        }
+        .onReceive(controller.$chatVolume.throttle(for: .milliseconds(250), scheduler: RunLoop.main, latest: true)) { newValue in
+            displayChatVolume = newValue
         }
     }
     

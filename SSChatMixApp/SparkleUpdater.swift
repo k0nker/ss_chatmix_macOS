@@ -1,54 +1,33 @@
 import Sparkle
-import Foundation
+import Combine
 
-final class SparkleUpdater: NSObject, ObservableObject {
-    static let shared = SparkleUpdater()
+// This view model class manages Sparkle's updater and publishes its state for SwiftUI
+final class SparkleUpdaterViewModel: ObservableObject {
+    static let shared = SparkleUpdaterViewModel()
     
-    let updater: SPUUpdater
+    private let updaterController: SPUStandardUpdaterController
     
     @Published var canCheckForUpdates = false
-    @Published var isAutomaticallyChecksForUpdates = true
+    @Published var automaticallyChecksForUpdates = true
     
-    override init() {
-        // Initialize updater with GitHub releases feed
-        // Replace USERNAME and REPO with your GitHub details
-        let hostBundle = Bundle.main
-        self.updater = SPUUpdater(hostBundle: hostBundle)!
+    private init() {
+        // Create the updater controller which will start the updater automatically
+        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
         
-        super.init()
+        // Observe canCheckForUpdates property
+        updaterController.updater.publisher(for: \.canCheckForUpdates)
+            .assign(to: &$canCheckForUpdates)
         
-        // Set the update feed URL (GitHub releases as Sparkle appcast)
-        // Format: https://github.com/USERNAME/REPO/releases.atom
-        updater.feedURL = URL(string: "https://github.com/k0nker/ss_chatmix_macOS/releases.atom")
-        updater.delegate = self
-        
-        // Start automatic update checks
-        updater.startUpdatingAndDisplayingUserInterface()
-        
-        // Observe automatic check setting
-        self.isAutomaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
+        // Observe and sync automaticallyChecksForUpdates
+        updaterController.updater.publisher(for: \.automaticallyChecksForUpdates)
+            .assign(to: &$automaticallyChecksForUpdates)
     }
     
     func checkForUpdates() {
-        updater.checkForUpdates()
+        updaterController.checkForUpdates(nil)
     }
     
-    func toggleAutomaticUpdates(_ enabled: Bool) {
-        updater.automaticallyChecksForUpdates = enabled
-        isAutomaticallyChecksForUpdates = enabled
-    }
-}
-
-// MARK: - SPUUpdaterDelegate
-
-extension SparkleUpdater: SPUUpdaterDelegate {
-    func updater(_ updater: SPUUpdater, didFinishChecking updateItems: [SUAppcastItem], isUpdateAvailable: Bool) {
-        // Called when update check completes
-        print("Update check complete. Available: \(isUpdateAvailable)")
-    }
-    
-    func updaterDidNotFind(anUpdateWithLatestUserProfile latestProfile: SUAppcastItem) {
-        // Called when no update is available
-        print("No update available")
+    func setAutomaticallyChecksForUpdates(_ enabled: Bool) {
+        updaterController.updater.automaticallyChecksForUpdates = enabled
     }
 }

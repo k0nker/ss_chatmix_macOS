@@ -20,6 +20,12 @@ public class HIDController {
     private var device: IOHIDDevice?
     public var onDialChanged: ((Int, Int) -> Void)?
     
+    // Dedicated thread for HID processing (isolated from main thread)
+    // This prevents UI operations (modals, Settings window) from blocking HID input,
+    // which would starve audio processing and cause crackling
+    private var hidThread: Thread?
+    private var hidRunLoop: CFRunLoop?
+    
     // Debouncing for volume changes
     private var lastUpdateTime: Date = Date.distantPast
     private var lastGameVolume: Int = -1
@@ -153,40 +159,78 @@ public class HIDController {
             controller.handleInputValue(value)
         }, context)
         
-        IOHIDManagerScheduleWithRunLoop(
-            manager,
-            CFRunLoopGetCurrent(),
-            CFRunLoopMode.defaultMode.rawValue
-        )
+        // Start background thread with its own run loop
+        // This isolates HID processing from main thread blocking (modals, etc.)
+        let semaphore = DispatchSemaphore(value: 0)
+        var startError: Error?
         
-        let openResult = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
-        
-        guard openResult == kIOReturnSuccess else {
-            throw SSChatMixError.hidControllerFailed("Failed to open HID manager (result: \(openResult))")
+        hidThread = Thread { [weak self] in
+            guard let self = self else { return }
+            
+            // Get the run loop for this thread
+            self.hidRunLoop = CFRunLoopGetCurrent()
+            
+            // Schedule HID manager on this thread's run loop
+            IOHIDManagerScheduleWithRunLoop(
+                manager,
+                self.hidRunLoop!,
+                CFRunLoopMode.defaultMode.rawValue
+            )
+            
+            let openResult = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+            
+            if openResult != kIOReturnSuccess {
+                startError = SSChatMixError.hidControllerFailed("Failed to open HID manager (result: \(openResult))")
+                semaphore.signal()
+                return
+            }
+            
+            print("   HID manager opened successfully on background thread, listening for reports...")
+            semaphore.signal()
+            
+            // Run the run loop
+            CFRunLoopRun()
         }
         
-        print("   HID manager opened successfully, listening for reports...")
+        hidThread?.qualityOfService = .userInteractive
+        hidThread?.start()
+        
+        // Wait for thread to start
+        semaphore.wait()
+        
+        if let error = startError {
+            throw error
+        }
     }
     
     public func stop() {
         guard let manager = manager else { return }
         
+        // Stop on the background thread
+        if let runLoop = hidRunLoop {
+            IOHIDManagerUnscheduleFromRunLoop(
+                manager,
+                runLoop,
+                CFRunLoopMode.defaultMode.rawValue
+            )
+            
+            // Stop the run loop
+            CFRunLoopStop(runLoop)
+        }
+        
         IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
-        IOHIDManagerUnscheduleFromRunLoop(
-            manager,
-            CFRunLoopGetCurrent(),
-            CFRunLoopMode.defaultMode.rawValue
-        )
         
         self.manager = nil
         self.device = nil
+        self.hidRunLoop = nil
+        self.hidThread = nil
     }
     
     // MARK: - Input Handling
     
     private func handleInputValue(_ value: IOHIDValue) {
         let element = IOHIDValueGetElement(value)
-        let usagePage = IOHIDElementGetUsagePage(element)
+        _ = IOHIDElementGetUsagePage(element)
         
         let dataLength = IOHIDValueGetLength(value)
         let dataPtr = IOHIDValueGetBytePtr(value)
@@ -224,3 +268,4 @@ public class HIDController {
         }
     }
 }
+
