@@ -13,6 +13,7 @@ config.json
 # Random
 .vscode
 Planning
+Reference
 
 # Distribution & Build (sensitive/local)
 DISTRIBUTION.md
