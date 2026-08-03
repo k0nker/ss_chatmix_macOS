@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import Combine
 import Sparkle
+import AVFoundation
 
 class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     var statusItem: NSStatusItem!
@@ -37,15 +38,15 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     // Windows
     var settingsWindow: NSWindow?
     
-    // Sparkle updater
-    let sparkleUpdater = SparkleUpdater.shared
-    
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Set app icon for Dock, notifications, etc.
+        NSApplication.shared.applicationIconImage = createAppIcon()
+        
         // Create menu bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "ChatMix")
+            button.image = createMenuBarIcon()
             button.image?.isTemplate = true
         }
         
@@ -68,7 +69,17 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 print("   Chat: \(config!.audioDevices.chat.name)")
                 print("   Output: \(config!.outputDeviceUid ?? "not set")")
                 print("   HID: \(config!.hidDevice.vendorId):\(config!.hidDevice.productId)")
+                
+                // Request permission and start controller when ready
+                #if os(macOS)
+                if #available(macOS 14.0, *) {
+                    requestMicrophonePermissionThenStart()
+                } else {
+                    startController()
+                }
+                #else
                 startController()
+                #endif
             } catch {
                 print("Config error: \(error)")
                 statusMessage = "Config error"
@@ -78,6 +89,97 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             print("   Select devices from menu to configure")
         }
     }
+    
+    // MARK: - App Icon
+    
+    /// Creates the app icon for Dock, notifications, etc. (no status indicator)
+    private func createAppIcon() -> NSImage {
+        let iconSize = NSSize(width: 512, height: 512)
+        let image = NSImage(size: iconSize)
+        
+        image.lockFocus()
+        
+        // Draw rounded rectangle background (macOS icon style)
+        let backgroundRect = NSRect(x: 0, y: 0, width: iconSize.width, height: iconSize.height)
+        let cornerRadius: CGFloat = iconSize.width * 0.225 // Standard macOS icon corner radius
+        let backgroundPath = NSBezierPath(roundedRect: backgroundRect, xRadius: cornerRadius, yRadius: cornerRadius)
+        
+        // Use gradient background
+        let gradient = NSGradient(colors: [
+            NSColor(calibratedRed: 0.2, green: 0.5, blue: 0.8, alpha: 1.0),
+            NSColor(calibratedRed: 0.1, green: 0.3, blue: 0.6, alpha: 1.0)
+        ])
+        gradient?.draw(in: backgroundPath, angle: -45)
+        
+        // Draw headphones symbol (background layer)
+        if let headphonesSymbol = NSImage(systemSymbolName: "headphones", accessibilityDescription: "Audio") {
+            let symbolSize = NSSize(width: 380, height: 380)
+            let symbolRect = NSRect(x: 66, y: 66, width: symbolSize.width, height: symbolSize.height)
+            NSColor.white.withAlphaComponent(0.9).setFill()
+            headphonesSymbol.draw(in: symbolRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        }
+        
+        // Draw play icon on top (centered, slightly smaller)
+        if let playSymbol = NSImage(systemSymbolName: "play.fill", accessibilityDescription: "Play") {
+            let playSize = NSSize(width: 180, height: 180)
+            let playRect = NSRect(
+                x: (iconSize.width - playSize.width) / 2 + 10,
+                y: (iconSize.height - playSize.height) / 2,
+                width: playSize.width,
+                height: playSize.height
+            )
+            NSColor.white.setFill()
+            playSymbol.draw(in: playRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        }
+        
+        image.unlockFocus()
+        image.isTemplate = false
+        
+        return image
+    }
+    
+    // MARK: - Menu Bar Icon
+    
+    /// Creates a custom menu bar icon with play symbol and headphones
+    private func createMenuBarIcon() -> NSImage {
+        let iconSize = NSSize(width: 22, height: 22)
+        let image = NSImage(size: iconSize)
+        
+        image.lockFocus()
+        
+        // Draw headphones symbol (background layer)
+        if let headphonesSymbol = NSImage(systemSymbolName: "headphones", accessibilityDescription: "Audio") {
+            let symbolSize = NSSize(width: 18, height: 18)
+            let symbolRect = NSRect(x: 2, y: 2, width: symbolSize.width, height: symbolSize.height)
+            headphonesSymbol.draw(in: symbolRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        }
+        
+        // Draw play icon on top (centered, slightly smaller)
+        if let playSymbol = NSImage(systemSymbolName: "play.fill", accessibilityDescription: "Play") {
+            let playSize = NSSize(width: 9, height: 9)
+            let playRect = NSRect(
+                x: (iconSize.width - playSize.width) / 2 + 0.5,
+                y: (iconSize.height - playSize.height) / 2,
+                width: playSize.width,
+                height: playSize.height
+            )
+            playSymbol.draw(in: playRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        }
+        
+        image.unlockFocus()
+        image.isTemplate = true  // Template mode to adapt to menu bar theme
+        
+        return image
+    }
+    
+    /// Updates the menu bar icon based on current status
+    private func updateMenuBarIcon() {
+        if let button = statusItem.button {
+            button.image = createMenuBarIcon()
+        }
+    }
+    
+    // MARK: - Device Management
     
     func loadAvailableDevices() {
         // Load HID devices
@@ -139,6 +241,71 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
     
+    // MARK: - Microphone Permission
+    
+    /// Request microphone permission and start controller when granted
+    /// Prevents race condition by waiting for permission before starting audio
+    private func requestMicrophonePermissionThenStart() {
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        print("🎤 Microphone permission status: \\(status.rawValue)")
+        
+        switch status {
+        case .authorized:
+            print("✅ Microphone permission already authorized")
+            startController()
+            
+        case .notDetermined:
+            print("🎤 Requesting microphone permission...")
+            statusMessage = "Waiting for permission..."
+            updateMenu()
+            
+            AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        print("✅ Microphone permission granted")
+                        self?.startController()
+                    } else {
+                        print("❌ Microphone permission denied - cannot start")
+                        self?.statusMessage = "Microphone permission denied"
+                        self?.updateMenu()
+                    }
+                }
+            }
+            
+        case .denied, .restricted:
+            print("❌ Microphone permission denied or restricted")
+            print("   Go to System Settings > Privacy & Security > Microphone")
+            statusMessage = "Microphone permission denied"
+            updateMenu()
+            
+        @unknown default:
+            print("⚠️ Unknown microphone permission status")
+            statusMessage = "Permission error"
+            updateMenu()
+        }
+    }
+    
+    /// Start controller with permission check (for manual restart/reload)
+    private func startControllerWithPermissionCheck() {
+        #if os(macOS)
+        if #available(macOS 14.0, *) {
+            let status = AVCaptureDevice.authorizationStatus(for: .audio)
+            if status == .authorized {
+                startController()
+            } else {
+                print("⚠️ Cannot start - microphone permission not granted")
+                print("   Go to System Settings > Privacy & Security > Microphone")
+                statusMessage = "Microphone permission denied"
+                updateMenu()
+            }
+            return
+        }
+        #endif
+        startController()
+    }
+    
+    // MARK: - Menu Bar
+    
     func updateMenu() {
         let menu = NSMenu()
         
@@ -190,13 +357,17 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         menu.addItem(buildChatDeviceMenu())
         menu.addItem(buildOutputDeviceMenu())
         
-        // Restart
-        if isRunning {
-            menu.addItem(NSMenuItem.separator())
-            let restartItem = NSMenuItem(title: "Restart Controller", action: #selector(restartController), keyEquivalent: "r")
-            restartItem.target = self
-            menu.addItem(restartItem)
-        }
+        menu.addItem(NSMenuItem.separator())
+        
+        // Restart (always visible - can start if stopped, or restart if running)
+        let restartItem = NSMenuItem(title: isRunning ? "Restart Controller" : "Start Controller", action: #selector(restartController), keyEquivalent: "r")
+        restartItem.target = self
+        menu.addItem(restartItem)
+        
+        // Reload (always visible)
+        let reloadItem = NSMenuItem(title: "Reload", action: #selector(reloadConfig), keyEquivalent: "R")
+        reloadItem.target = self
+        menu.addItem(reloadItem)
         
         menu.addItem(NSMenuItem.separator())
         
@@ -230,6 +401,9 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         menu.addItem(quitItem)
         
         self.statusItem.menu = menu
+        
+        // Update menu bar icon to reflect current status
+        updateMenuBarIcon()
     }
     
     func buildChatMixDeviceMenu() -> NSMenuItem {
@@ -438,6 +612,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             print("Microphone permission denied")
             statusMessage = "Microphone permission required"
             isRunning = false
+            updateMenuBarIcon()
             
             // Show alert to user
             DispatchQueue.main.async {
@@ -460,6 +635,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             print("Controller start failed: \(error)")
             statusMessage = "Error: \(error.localizedDescription)"
             isRunning = false
+            updateMenuBarIcon()
         }
     }
     
@@ -469,12 +645,49 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         hidController?.stop()
         hidController = nil
         isRunning = false
+        updateMenuBarIcon()
     }
     
     @objc func restartController() {
         stopController()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.startController()
+            self?.startControllerWithPermissionCheck()
+        }
+    }
+    
+    @objc func reloadConfig() {
+        print("🔄 Reloading configuration...")
+        
+        // Stop current controller if running
+        stopController()
+        
+        // Reload config
+        if configManager.exists() {
+            do {
+                config = try configManager.load()
+                print("✅ Config reloaded from: \(configManager.getConfigPath())")
+                print("   Game: \(config!.audioDevices.game.name)")
+                print("   Chat: \(config!.audioDevices.chat.name)")
+                print("   Output: \(config!.outputDeviceUid ?? "not set")")
+                print("   HID: \(config!.hidDevice.vendorId):\(config!.hidDevice.productId)")
+                
+                // Refresh device lists
+                loadAvailableDevices()
+                
+                // Restart with new config
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.startControllerWithPermissionCheck()
+                    self?.updateMenu()
+                }
+            } catch {
+                print("❌ Config reload error: \(error)")
+                statusMessage = "Config error"
+                updateMenu()
+            }
+        } else {
+            print("⚠️ No config file found at: \(configManager.getConfigPath())")
+            statusMessage = "Not configured"
+            updateMenu()
         }
     }
     
@@ -731,12 +944,21 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         The controller runs inside this app - no external processes needed.
         """
         alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "View on GitHub")
         alert.alertStyle = .informational
-        alert.runModal()
+        
+        let response = alert.runModal()
+        
+        // If user clicked "View on GitHub" (second button)
+        if response == .alertSecondButtonReturn {
+            if let url = URL(string: "https://github.com/k0nker/ss_chatmix_macOS") {
+                NSWorkspace.shared.open(url)
+            }
+        }
     }
     
     @objc func checkForUpdates() {
-        sparkleUpdater.checkForUpdates()
+        SparkleUpdaterViewModel.shared.checkForUpdates()
     }
     
     @objc func quit() {

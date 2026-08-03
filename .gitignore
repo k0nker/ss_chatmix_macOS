@@ -20,9 +20,14 @@ SPARKLE_SETUP.md
 ExportOptions.plist
 build_and_notarize.sh
 generate_sparkle_keys.sh
+quick_release.sh
+RELEASE_GUIDE.md
+create_dmg.sh
 build/
 
 # Sparkle keys (NEVER commit private key!)
 .sparkle_rsa
 .sparkle_rsa.pub
 ~/.sparkle_rsa
+
+.app

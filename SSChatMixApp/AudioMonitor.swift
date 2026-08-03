@@ -62,37 +62,19 @@ public class AudioMonitor {
         print("   Chat input: Device \(chatDeviceID)")
         print("   Output: Device \(outputDeviceID)")
         
-        // Check and request microphone permission
+        // Check microphone permission (NON-BLOCKING - just verify it's granted)
+        // Permission should have been requested early at app launch
         #if os(macOS)
         if #available(macOS 14.0, *) {
             let status = AVCaptureDevice.authorizationStatus(for: .audio)
-            print("Microphone permission status: \(status.rawValue)")
             
-            if status == .notDetermined {
-                print("Requesting microphone permission...")
-                // Request permission - this will show system dialog
-                let semaphore = DispatchSemaphore(value: 0)
-                var granted = false
-                AVCaptureDevice.requestAccess(for: .audio) { result in
-                    granted = result
-                    semaphore.signal()
-                }
-                semaphore.wait()
-                
-                if granted {
-                    print("Microphone permission granted")
-                } else {
-                    print("Microphone permission denied - audio capture will not work")
-                    throw AudioMonitorError.permissionDenied
-                }
-            } else if status != .authorized {
-                print("WARNING: Microphone permission not granted!")
-                print("   Menu bar apps need this even for virtual devices")
+            if status != .authorized {
+                print("Microphone permission not granted!")
                 print("   Go to System Settings > Privacy & Security > Microphone")
                 print("   Then restart the app")
                 throw AudioMonitorError.permissionDenied
             } else {
-                print("Microphone permission already authorized")
+                print("Microphone permission verified")
             }
         }
         #endif
@@ -534,54 +516,75 @@ private func outputRenderCallback(
 
 // MARK: - Ring Buffer
 
+/// Lock-free ring buffer for real-time audio (single-reader, single-writer)
+/// Based on the approach used by BackgroundMusic and other pro audio apps
 private class RingBuffer {
     private var buffer: UnsafeMutablePointer<Float>
-    private var writeIndex = 0
-    private var readIndex = 0
+    private var writeIndex: UnsafeMutablePointer<Int32>
+    private var readIndex: UnsafeMutablePointer<Int32>
     private let capacity: Int
-    private let lock = NSLock()
     
     init(capacity: Int) {
         self.capacity = capacity
         self.buffer = UnsafeMutablePointer<Float>.allocate(capacity: capacity)
         self.buffer.initialize(repeating: 0.0, count: capacity)
+        
+        // Allocate atomic indices
+        self.writeIndex = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
+        self.readIndex = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
+        self.writeIndex.initialize(to: 0)
+        self.readIndex.initialize(to: 0)
     }
     
     deinit {
         buffer.deallocate()
+        writeIndex.deallocate()
+        readIndex.deallocate()
     }
     
+    /// Lock-free write for real-time thread
     func write(_ data: UnsafePointer<Float>, count: Int) {
-        lock.lock()
-        defer { lock.unlock() }
+        guard count <= capacity else { return } // Safety check
+        
+        let write = Int(writeIndex.pointee)
         
         // Fast path: no wrap-around
-        if writeIndex + count <= capacity {
-            buffer.advanced(by: writeIndex).assign(from: data, count: count)
-            writeIndex = (writeIndex + count) % capacity
+        if write + count <= capacity {
+            buffer.advanced(by: write).update(from: data, count: count)
+            OSAtomicAdd32Barrier(Int32(count), writeIndex)
         } else {
-            // Slow path: wrap-around
-            let firstChunk = capacity - writeIndex
-            buffer.advanced(by: writeIndex).assign(from: data, count: firstChunk)
-            buffer.assign(from: data.advanced(by: firstChunk), count: count - firstChunk)
-            writeIndex = count - firstChunk
+            // Wrap-around: split into two copies
+            let firstChunk = capacity - write
+            buffer.advanced(by: write).update(from: data, count: firstChunk)
+            buffer.update(from: data.advanced(by: firstChunk), count: count - firstChunk)
+            
+            // Update write index atomically
+            let newWrite = (write + count) % capacity
+            OSMemoryBarrier()
+            writeIndex.pointee = Int32(newWrite)
         }
     }
     
+    /// Lock-free read for real-time thread
     func read(_ data: UnsafeMutablePointer<Float>, count: Int) {
-        lock.lock()
-        defer { lock.unlock() }
+        guard count <= capacity else { return } // Safety check
+        
+        let read = Int(readIndex.pointee)
         
         // Fast path: no wrap-around
-        if readIndex + count <= capacity {
-            data.assign(from: buffer.advanced(by: readIndex), count: count)
-            readIndex = (readIndex + count) % capacity
+        if read + count <= capacity {
+            data.update(from: buffer.advanced(by: read), count: count)
+            OSAtomicAdd32Barrier(Int32(count), readIndex)
         } else {
-            // Slow path: wrap-around
-            let firstChunk = capacity - readIndex
-            data.assign(from: buffer.advanced(by: readIndex), count: firstChunk)
-            data.advanced(by: firstChunk).assign(from: buffer, count: count - firstChunk)
-            readIndex = count - firstChunk
+            // Wrap-around: split into two copies
+            let firstChunk = capacity - read
+            data.update(from: buffer.advanced(by: read), count: firstChunk)
+            data.advanced(by: firstChunk).update(from: buffer, count: count - firstChunk)
+            
+            // Update read index atomically
+            let newRead = (read + count) % capacity
+            OSMemoryBarrier()
+            readIndex.pointee = Int32(newRead)
         }
     }
 }
