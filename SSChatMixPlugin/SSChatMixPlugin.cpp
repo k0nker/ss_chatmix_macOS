@@ -437,27 +437,97 @@ static OSStatus SSChatMixPlugIn_SetPropertyData(AudioServerPlugInDriverRef inDri
 #pragma mark - IO Operations (Not Supported - Return Unsupported)
 
 static OSStatus SSChatMixPlugIn_StartIO(AudioServerPlugInDriverRef inDriver, AudioObjectID inDeviceObjectID, UInt32 inClientID) {
-    #pragma unused(inDriver, inDeviceObjectID, inClientID)
+    #pragma unused(inDriver, inClientID)
     
-    return kAudioHardwareUnsupportedOperationError;
+    // Get the plugin instance
+    SSChatMix_PlugIn& plugin = SSChatMix_PlugIn::GetInstance();
+    
+    // Find the device and start its IO
+    if (inDeviceObjectID == kObjectID_GameDevice) {
+        plugin.GetGameDevice().SetIORunning(true);
+        printf("SSChatMixPlugin: StartIO - Game Device (client %u)\n", inClientID);
+        return kAudioHardwareNoError;
+    }
+    else if (inDeviceObjectID == kObjectID_ChatDevice) {
+        plugin.GetChatDevice().SetIORunning(true);
+        printf("SSChatMixPlugin: StartIO - Chat Device (client %u)\n", inClientID);
+        return kAudioHardwareNoError;
+    }
+    
+    return kAudioHardwareBadObjectError;
 }
 
 static OSStatus SSChatMixPlugIn_StopIO(AudioServerPlugInDriverRef inDriver, AudioObjectID inDeviceObjectID, UInt32 inClientID) {
-    #pragma unused(inDriver, inDeviceObjectID, inClientID)
+    #pragma unused(inDriver, inClientID)
     
-    return kAudioHardwareUnsupportedOperationError;
+    // Get the plugin instance
+    SSChatMix_PlugIn& plugin = SSChatMix_PlugIn::GetInstance();
+    
+    // Find the device and stop its IO
+    if (inDeviceObjectID == kObjectID_GameDevice) {
+        plugin.GetGameDevice().SetIORunning(false);
+        printf("SSChatMixPlugin: StopIO - Game Device (client %u)\n", inClientID);
+        return kAudioHardwareNoError;
+    }
+    else if (inDeviceObjectID == kObjectID_ChatDevice) {
+        plugin.GetChatDevice().SetIORunning(false);
+        printf("SSChatMixPlugin: StopIO - Chat Device (client %u)\n", inClientID);
+        return kAudioHardwareNoError;
+    }
+    
+    return kAudioHardwareBadObjectError;
 }
 
 static OSStatus SSChatMixPlugIn_GetZeroTimeStamp(AudioServerPlugInDriverRef inDriver, AudioObjectID inDeviceObjectID, UInt32 inClientID, Float64* outSampleTime, UInt64* outHostTime, UInt64* outSeed) {
-    #pragma unused(inDriver, inDeviceObjectID, inClientID, outSampleTime, outHostTime, outSeed)
+    #pragma unused(inDriver, inClientID)
     
-    return kAudioHardwareUnsupportedOperationError;
+    // Get the plugin instance
+    SSChatMix_PlugIn& plugin = SSChatMix_PlugIn::GetInstance();
+    
+    // Get timing from the device
+    SSChatMix_Device* device = nullptr;
+    if (inDeviceObjectID == kObjectID_GameDevice) {
+        device = &plugin.GetGameDevice();
+    }
+    else if (inDeviceObjectID == kObjectID_ChatDevice) {
+        device = &plugin.GetChatDevice();
+    }
+    
+    if (device == nullptr) {
+        return kAudioHardwareBadObjectError;
+    }
+    
+    // Get the anchor time
+    device->GetAnchorTime(*outHostTime, *outSampleTime);
+    
+    // For now, seed is just 1 (will increment when timing changes)
+    *outSeed = 1;
+    
+    return kAudioHardwareNoError;
 }
 
 static OSStatus SSChatMixPlugIn_WillDoIOOperation(AudioServerPlugInDriverRef inDriver, AudioObjectID inDeviceObjectID, UInt32 inClientID, UInt32 inOperationID, Boolean* outWillDo, Boolean* outWillDoInPlace) {
-    #pragma unused(inDriver, inDeviceObjectID, inClientID, inOperationID, outWillDo, outWillDoInPlace)
+    #pragma unused(inDriver, inDeviceObjectID, inClientID)
     
-    return kAudioHardwareUnsupportedOperationError;
+    // We support both writing audio (from apps) and reading audio (by user-space mixer)
+    switch (inOperationID) {
+        case kAudioServerPlugInIOOperationWriteMix:
+            // Apps can write audio to our virtual device output stream
+            *outWillDo = true;
+            *outWillDoInPlace = true;
+            return kAudioHardwareNoError;
+            
+        case kAudioServerPlugInIOOperationReadInput:
+            // Allow reading audio from our virtual device input stream (loopback from output)
+            *outWillDo = true;
+            *outWillDoInPlace = true;
+            return kAudioHardwareNoError;
+            
+        default:
+            *outWillDo = false;
+            *outWillDoInPlace = false;
+            return kAudioHardwareNoError;
+    }
 }
 
 static OSStatus SSChatMixPlugIn_BeginIOOperation(AudioServerPlugInDriverRef inDriver, AudioObjectID inDeviceObjectID, UInt32 inClientID, UInt32 inOperationID, UInt32 inIOBufferFrameSize, const AudioServerPlugInIOCycleInfo* inIOCycleInfo) {
@@ -467,7 +537,43 @@ static OSStatus SSChatMixPlugIn_BeginIOOperation(AudioServerPlugInDriverRef inDr
 }
 
 static OSStatus SSChatMixPlugIn_DoIOOperation(AudioServerPlugInDriverRef inDriver, AudioObjectID inDeviceObjectID, AudioObjectID inStreamObjectID, UInt32 inClientID, UInt32 inOperationID, UInt32 inIOBufferFrameSize, const AudioServerPlugInIOCycleInfo* inIOCycleInfo, void* ioMainBuffer, void* ioSecondaryBuffer) {
-    #pragma unused(inDriver, inDeviceObjectID, inStreamObjectID, inClientID, inOperationID, inIOBufferFrameSize, inIOCycleInfo, ioMainBuffer, ioSecondaryBuffer)
+    #pragma unused(inDriver, inStreamObjectID, inClientID, inIOCycleInfo, ioSecondaryBuffer)
+    
+    SSChatMix_PlugIn& plugin = SSChatMix_PlugIn::GetInstance();
+    
+    // Find the device
+    SSChatMix_Device* device = nullptr;
+    if (inDeviceObjectID == kObjectID_GameDevice) {
+        device = &plugin.GetGameDevice();
+    } else if (inDeviceObjectID == kObjectID_ChatDevice) {
+        device = &plugin.GetChatDevice();
+    }
+    
+    if (device == nullptr) {
+        return kAudioHardwareBadObjectError;
+    }
+    
+    // Handle WriteMix - apps writing audio to our virtual device output stream
+    if (inOperationID == kAudioServerPlugInIOOperationWriteMix) {
+        // Write the audio data to the device's ring buffer
+        if (ioMainBuffer != nullptr && inIOBufferFrameSize > 0) {
+            Float32* audioData = (Float32*)ioMainBuffer;
+            device->WriteAudio(audioData, inIOBufferFrameSize);
+        }
+        
+        return kAudioHardwareNoError;
+    }
+    
+    // Handle ReadInput - user-space app reading audio from our virtual device input stream
+    if (inOperationID == kAudioServerPlugInIOOperationReadInput) {
+        // Read audio data from the device's ring buffer
+        if (ioMainBuffer != nullptr && inIOBufferFrameSize > 0) {
+            Float32* audioData = (Float32*)ioMainBuffer;
+            device->ReadAudio(audioData, inIOBufferFrameSize);
+        }
+        
+        return kAudioHardwareNoError;
+    }
     
     return kAudioHardwareUnsupportedOperationError;
 }

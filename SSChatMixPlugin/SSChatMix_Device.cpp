@@ -22,13 +22,14 @@ SSChatMix_Device::SSChatMix_Device(AudioObjectID inObjectID,
     SSChatMix_Object(inObjectID, kAudioDeviceClassID, kAudioObjectClassID, kAudioObjectPlugInObject),
     mDeviceName(inDeviceName),
     mDeviceUID(inDeviceUID),
-    mInputStream(inInputStreamID, inObjectID, false, kSSChatMix_SampleRate),
-    mOutputStream(inOutputStreamID, inObjectID, false, kSSChatMix_SampleRate),
+    mInputStream(inInputStreamID, inObjectID, true, kSSChatMix_SampleRate),  // true = input stream
+    mOutputStream(inOutputStreamID, inObjectID, false, kSSChatMix_SampleRate),  // false = output stream
     mVolumeControl(inVolumeControlID, inObjectID, kAudioObjectPropertyScopeOutput, kAudioObjectPropertyElementMain),
     mHostTicksPerFrame(0.0),
     mAnchorHostTime(0),
     mAnchorSampleTime(0.0),
-    mIsIORunning(false)
+    mIsIORunning(false),
+    mRingBuffer(kSSChatMix_RingBufferFrames, kSSChatMix_Channels)
 {
 }
 
@@ -69,6 +70,20 @@ void SSChatMix_Device::SetIORunning(bool isRunning) {
 
 bool SSChatMix_Device::IsIORunning() const {
     return mIsIORunning;
+}
+
+// MARK: - Audio I/O
+
+UInt32 SSChatMix_Device::WriteAudio(const Float32* data, UInt32 frameCount) {
+    return mRingBuffer.Write(data, frameCount);
+}
+
+UInt32 SSChatMix_Device::ReadAudio(Float32* data, UInt32 frameCount) {
+    return mRingBuffer.Read(data, frameCount);
+}
+
+UInt32 SSChatMix_Device::GetAvailableFrames() const {
+    return mRingBuffer.GetAvailableFrames();
 }
 
 // MARK: - Property Operations

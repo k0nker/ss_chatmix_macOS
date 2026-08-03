@@ -11,6 +11,7 @@
 #include "SSChatMix_Object.h"
 #include "SSChatMix_Stream.h"
 #include "SSChatMix_Control.h"
+#include "SSChatMix_RingBuffer.h"
 
 // MARK: - Device Object Class
 
@@ -70,6 +71,11 @@ public:
     // IO state
     void SetIORunning(bool isRunning);
     bool IsIORunning() const;
+    
+    // Audio I/O
+    UInt32 WriteAudio(const Float32* data, UInt32 frameCount);
+    UInt32 ReadAudio(Float32* data, UInt32 frameCount);
+    UInt32 GetAvailableFrames() const;
 
 private:
     const char* mDeviceName;
@@ -85,6 +91,9 @@ private:
     
     // IO state
     bool mIsIORunning;
+    
+    // Audio buffer
+    SSChatMix_RingBuffer mRingBuffer;
 };
 
 #endif /* SSChatMix_Device_h */
