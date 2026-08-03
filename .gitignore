@@ -31,3 +31,5 @@ build/
 ~/.sparkle_rsa
 
 .app
+
+.build/
