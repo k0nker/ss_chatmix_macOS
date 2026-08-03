@@ -10,7 +10,10 @@
 #define SSChatMix_SharedMemory_h
 
 #include <CoreAudio/AudioServerPlugIn.h>
-#include <mach/mach.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <atomic>
 
 // Shared memory ring buffer structure (must be POD for shared memory)
@@ -64,10 +67,9 @@ private:
     UInt32 mChannelCount;
     UInt32 mBytesPerFrame;
     
-    // Shared memory mapping
-    mach_port_t mMemoryPort;
-    mach_vm_address_t mMemoryAddress;
-    mach_vm_size_t mMemorySize;
+    // Shared memory mapping (POSIX shared memory)
+    void* mMemoryAddress;
+    size_t mMemorySize;
     
     // Pointer to shared ring buffer structure
     SSChatMix_SharedRingBuffer* mRingBuffer;

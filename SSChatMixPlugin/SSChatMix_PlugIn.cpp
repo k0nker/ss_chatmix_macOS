@@ -28,6 +28,11 @@ SSChatMix_PlugIn::SSChatMix_PlugIn()
     mChatDevice(kObjectID_ChatDevice, "SSChatMix Chat", kSSChatMixChatDevice_UID, "SSChatMixDevice",
                 kObjectID_ChatDevice_OutputStream, kObjectID_ChatDevice_VolumeControl)
 {
+    FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
+    if (log) {
+        fprintf(log, "SSChatMix_PlugIn constructor finished\n");
+        fclose(log);
+    }
 }
 
 SSChatMix_PlugIn::~SSChatMix_PlugIn() {
@@ -40,8 +45,23 @@ void SSChatMix_PlugIn::SetHost(AudioServerPlugInHostRef inHost) {
 }
 
 SSChatMix_PlugIn& SSChatMix_PlugIn::GetInstance() {
+    FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
+    if (log) {
+        fprintf(log, "GetInstance() called\n");
+        fclose(log);
+    }
     pthread_once(&sStaticInitializer, []() {
+        FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "pthread_once block executing - creating SSChatMix_PlugIn\n");
+            fclose(log);
+        }
         sInstance = new SSChatMix_PlugIn;
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "SSChatMix_PlugIn created, calling Activate()\n");
+            fclose(log);
+        }
         sInstance->Activate();
         
         // Initialize timing
@@ -57,9 +77,19 @@ SSChatMix_PlugIn& SSChatMix_PlugIn::GetInstance() {
         sInstance->mGameDevice.SetAnchorTime(anchorHostTime, 0.0);
         sInstance->mChatDevice.SetAnchorTime(anchorHostTime, 0.0);
         
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "Plugin initialization complete\n");
+            fclose(log);
+        }
         os_log(OS_LOG_DEFAULT, "SSChatMix_PlugIn::GetInstance: hostTicksPerFrame=%f",
                sInstance->mGameDevice.GetHostTicksPerFrame());
     });
+    log = fopen("/tmp/sschatmix_plugin.log", "a");
+    if (log) {
+        fprintf(log, "GetInstance() returning\n");
+        fclose(log);
+    }
     return *sInstance;
 }
 

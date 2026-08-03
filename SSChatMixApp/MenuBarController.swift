@@ -566,10 +566,11 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             print("")
             print("Audio Flow:")
             print("  1. Apps write to SSChatMix virtual output streams")
-            print("  2. Plugin stores in ring buffers (loopback)")
-            print("  3. Swift app reads from SSChatMix input streams")
+            print("  2. Plugin stores in shared memory (bypasses CoreAudio input streams)")
+            print("  3. Swift app reads directly from shared memory")
             print("  4. Swift app mixes Game + Chat with volumes")
             print("  5. Swift app writes to physical output device")
+            print("  ⚠️ NO INPUT STREAMS = NO MICROPHONE PERMISSION REQUIRED")
             print("")
             
             // Configure HID controller
@@ -602,17 +603,17 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             try hidController?.start()
             print("HID controller started")
             
-            // Start audio routing
-            print("Starting audio router...")
+            // Start audio routing with shared memory
+            print("Starting audio router (shared memory mode)...")
             let router = AudioRouter(
-                gameDeviceID: foundGameDeviceID,
-                chatDeviceID: foundChatDeviceID,
+                gameDeviceUID: config.audioDevices.game.uid,
+                chatDeviceUID: config.audioDevices.chat.uid,
                 outputDeviceID: foundOutputDeviceID
             )
             try router.start()
             router.updateVolumes(game: 50.0, chat: 50.0) // Initial 50/50 balance
             self.audioRouter = router
-            print("Audio router started")
+            print("Audio router started with shared memory bypass")
             
             isRunning = true
             statusMessage = "Running"
