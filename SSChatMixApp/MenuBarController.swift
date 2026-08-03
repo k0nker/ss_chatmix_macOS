@@ -64,17 +64,6 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 print("   Chat: \(config!.audioDevices.chat.name)")
                 print("   Output: \(config!.outputDeviceUid ?? "not set")")
                 print("   HID: \(config!.hidDevice.vendorId):\(config!.hidDevice.productId)")
-                
-                // Restore last known volumes from config
-                if let lastGame = config!.lastGameVolume {
-                    gameVolume = lastGame
-                    print("   Restored game volume: \(lastGame)%")
-                }
-                if let lastChat = config!.lastChatVolume {
-                    chatVolume = lastChat
-                    print("   Restored chat volume: \(lastChat)%")
-                }
-                
                 startController()
             } catch {
                 print("Config error: \(error)")
@@ -414,14 +403,10 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                     chat: Float(chatVol) / 100.0
                 )
                 
-                // Update UI and save to config asynchronously (non-blocking)
+                // Update UI asynchronously (non-blocking)
                 DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    self.gameVolume = gameVol
-                    self.chatVolume = chatVol
-                    
-                    // Save volumes to config for next launch
-                    self.saveVolumesToConfig(gameVolume: gameVol, chatVolume: chatVol)
+                    self?.gameVolume = gameVol
+                    self?.chatVolume = chatVol
                 }
             }
             
@@ -540,9 +525,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 ),
                 launchAgentEnabled: false,
                 monitoringMode: true,
-                outputDeviceUid: nil,
-                lastGameVolume: gameVolume,
-                lastChatVolume: chatVolume
+                outputDeviceUid: nil
             )
         } else if let currentConfig = config {
             config = Config(
@@ -553,9 +536,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 ),
                 launchAgentEnabled: currentConfig.launchAgentEnabled,
                 monitoringMode: currentConfig.monitoringMode,
-                outputDeviceUid: currentConfig.outputDeviceUid,
-                lastGameVolume: currentConfig.lastGameVolume,
-                lastChatVolume: currentConfig.lastChatVolume
+                outputDeviceUid: currentConfig.outputDeviceUid
             )
         }
         
@@ -578,9 +559,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 hidDevice: HIDDeviceConfig(vendorId: "0x0000", productId: "0x0000"),
                 launchAgentEnabled: false,
                 monitoringMode: true,
-                outputDeviceUid: nil,
-                lastGameVolume: gameVolume,
-                lastChatVolume: chatVolume
+                outputDeviceUid: nil
             )
         } else if let currentConfig = config {
             config = Config(
@@ -596,9 +575,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 hidDevice: currentConfig.hidDevice,
                 launchAgentEnabled: currentConfig.launchAgentEnabled,
                 monitoringMode: currentConfig.monitoringMode,
-                outputDeviceUid: currentConfig.outputDeviceUid,
-                lastGameVolume: currentConfig.lastGameVolume,
-                lastChatVolume: currentConfig.lastChatVolume
+                outputDeviceUid: currentConfig.outputDeviceUid
             )
         }
         
@@ -621,9 +598,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 hidDevice: HIDDeviceConfig(vendorId: "0x0000", productId: "0x0000"),
                 launchAgentEnabled: false,
                 monitoringMode: true,
-                outputDeviceUid: nil,
-                lastGameVolume: gameVolume,
-                lastChatVolume: chatVolume
+                outputDeviceUid: nil
             )
         } else if let currentConfig = config {
             config = Config(
@@ -639,9 +614,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 hidDevice: currentConfig.hidDevice,
                 launchAgentEnabled: currentConfig.launchAgentEnabled,
                 monitoringMode: currentConfig.monitoringMode,
-                outputDeviceUid: currentConfig.outputDeviceUid,
-                lastGameVolume: currentConfig.lastGameVolume,
-                lastChatVolume: currentConfig.lastChatVolume
+                outputDeviceUid: currentConfig.outputDeviceUid
             )
         }
         
@@ -659,9 +632,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 hidDevice: HIDDeviceConfig(vendorId: "0x0000", productId: "0x0000"),
                 launchAgentEnabled: false,
                 monitoringMode: true,
-                outputDeviceUid: device.uid,
-                lastGameVolume: gameVolume,
-                lastChatVolume: chatVolume
+                outputDeviceUid: device.uid
             )
         } else if let currentConfig = config {
             config = Config(
@@ -669,9 +640,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 hidDevice: currentConfig.hidDevice,
                 launchAgentEnabled: currentConfig.launchAgentEnabled,
                 monitoringMode: currentConfig.monitoringMode,
-                outputDeviceUid: device.uid,
-                lastGameVolume: currentConfig.lastGameVolume,
-                lastChatVolume: currentConfig.lastChatVolume
+                outputDeviceUid: device.uid
             )
         }
         
@@ -698,34 +667,6 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         } catch {
             print("Failed to save config: \(error)")
             statusMessage = "Failed to save config"
-        }
-    }
-    
-    func saveVolumesToConfig(gameVolume: Int, chatVolume: Int) {
-        guard let currentConfig = config else { return }
-        
-        // Update config with new volumes (keep everything else the same)
-        config = Config(
-            version: currentConfig.version,
-            audioDevices: currentConfig.audioDevices,
-            hidDevice: currentConfig.hidDevice,
-            launchAgentEnabled: currentConfig.launchAgentEnabled,
-            createdAggregateDevices: currentConfig.createdAggregateDevices,
-            mainAggregateDevice: currentConfig.mainAggregateDevice,
-            monitoringMode: currentConfig.monitoringMode,
-            outputDeviceUid: currentConfig.outputDeviceUid,
-            lastGameVolume: gameVolume,
-            lastChatVolume: chatVolume
-        )
-        
-        // Save to disk (async to avoid blocking)
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self = self, let config = self.config else { return }
-            do {
-                try self.configManager.save(config)
-            } catch {
-                print("Failed to save volume config: \(error)")
-            }
         }
     }
     

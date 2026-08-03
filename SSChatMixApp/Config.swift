@@ -11,8 +11,6 @@ public struct Config: Codable {
     public let mainAggregateDevice: AggregateDeviceInfo?  // The multi-output device combining game+chat
     public let monitoringMode: Bool  // If true, use AudioMonitor to mix virtual devices to physical output
     public let outputDeviceUid: String?  // Physical output device UID when in monitoring mode
-    public let lastGameVolume: Int?  // Last known game volume from dial (0-100)
-    public let lastChatVolume: Int?  // Last known chat volume from dial (0-100)
     
     public init(
         version: String = "1.0",
@@ -22,9 +20,7 @@ public struct Config: Codable {
         createdAggregateDevices: [AggregateDeviceInfo] = [],
         mainAggregateDevice: AggregateDeviceInfo? = nil,
         monitoringMode: Bool = false,
-        outputDeviceUid: String? = nil,
-        lastGameVolume: Int? = nil,
-        lastChatVolume: Int? = nil
+        outputDeviceUid: String? = nil
     ) {
         self.version = version
         self.audioDevices = audioDevices
@@ -34,8 +30,6 @@ public struct Config: Codable {
         self.mainAggregateDevice = mainAggregateDevice
         self.monitoringMode = monitoringMode
         self.outputDeviceUid = outputDeviceUid
-        self.lastGameVolume = lastGameVolume
-        self.lastChatVolume = lastChatVolume
     }
 }
 
