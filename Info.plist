@@ -3,20 +3,16 @@
 <plist version="1.0">
 <dict>
 	<key>LSMinimumSystemVersion</key>
-	<string>13.0</string>
-	<key>LSUIElement</key>
-	<true/>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>SSChatMix needs access to audio devices to monitor and mix game and chat audio levels using your ChatMix dial.</string>
+	<string>15.0</string>
 	<key>NSSupportsAutomaticTermination</key>
 	<true/>
 	<key>NSSupportsSuddenTermination</key>
 	<false/>
-	<key>SUPublicEDKey</key>
-	<string>2ncaVOGIcEVWd6vM2s4IlIQ0J+vOUj7GHWeL6QmMzK4=</string>
-	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/k0nker/ss_chatmix_macOS/main/appcast.xml</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/k0nker/ss_chatmix_macOS/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>2ncaVOGIcEVWd6vM2s4IlIQ0J+vOUj7GHWeL6QmMzK4=</string>
 </dict>
 </plist>
