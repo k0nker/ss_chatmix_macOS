@@ -15,7 +15,7 @@
 	<key>SUPublicEDKey</key>
 	<string>2ncaVOGIcEVWd6vM2s4IlIQ0J+vOUj7GHWeL6QmMzK4=</string>
 	<key>SUFeedURL</key>
-	<string>https://github.com/k0nker/ss_chatmix_macOS/releases.atom</string>
+	<string>https://raw.githubusercontent.com/k0nker/ss_chatmix_macOS/main/appcast.xml</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 </dict>
