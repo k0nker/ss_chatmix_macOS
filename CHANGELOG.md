@@ -2,24 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
 ## [Unreleased]
 
 ### Added
-- Custom app icon with headphones and play symbol
-- Sparkle auto-update integration
-- Menu bar icon with headphones + play design
-- Settings window with update checking
-- Reload option to refresh configuration without restarting
-
 ### Changed
-- App now runs as menu bar only utility (LSUIElement)
-- Improved permission flow for microphone access
+### Fixed
+### Removed
+
+## [1.0.2] - 2026-08-03
+
+### Added
+- Real-time ChatMix dial monitoring
+- Live volume visualization in Settings window
+- Automatic updates via Sparkle
+- Native macOS menu bar app
+- Settings window with device configuration
+- Auto-update toggle in Settings (default: enabled)
+- GitHub repository link in About dialog
+- Background HID thread prevents UI blocking
 
 ### Fixed
-- HAL audio overload from blocking semaphore
-- Lock-free ring buffer for real-time audio processing
-- Microphone permission race condition
-- EdDSA signature verification with Sparkle
+- Audio crackling when opening Settings/About dialogs
+- Threading architecture to prevent main thread blocking
+- UI update throttling (250ms) to reduce audio thread starvation
 
 ## [1.0.0] - YYYY-MM-DD
 
