@@ -37,9 +37,10 @@ enum {
     kObjectID_PlugIn                = kAudioObjectPlugInObject,  // Always this value
     kObjectID_GameDevice            = 2,
     kObjectID_ChatDevice            = 3,
-    kObjectID_GameDevice_InputStream  = 4,
+    // Input streams removed - using shared memory instead to avoid TCC microphone restrictions
+    // kObjectID_GameDevice_InputStream  = 4,
     kObjectID_GameDevice_OutputStream = 5,
-    kObjectID_ChatDevice_InputStream  = 6,
+    // kObjectID_ChatDevice_InputStream  = 6,
     kObjectID_ChatDevice_OutputStream = 7,
     kObjectID_GameDevice_VolumeControl = 8,
     kObjectID_ChatDevice_VolumeControl = 9,

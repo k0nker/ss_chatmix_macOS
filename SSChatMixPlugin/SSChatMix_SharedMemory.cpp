@@ -6,18 +6,17 @@
 //
 
 #include "SSChatMix_SharedMemory.h"
-#include <servers/bootstrap.h>
-#include <mach/mach_vm.h>
 #include <algorithm>
 #include <string.h>
+#include <stdio.h>
+#include <os/log.h>
 
 SSChatMix_SharedMemory::SSChatMix_SharedMemory(const char* name, UInt32 capacityFrames, UInt32 channelCount)
 :
     mCapacityFrames(capacityFrames),
     mChannelCount(channelCount),
     mBytesPerFrame(channelCount * sizeof(Float32)),
-    mMemoryPort(MACH_PORT_NULL),
-    mMemoryAddress(0),
+    mMemoryAddress(nullptr),
     mMemorySize(0),
     mRingBuffer(nullptr),
     mAudioData(nullptr),
@@ -32,76 +31,60 @@ SSChatMix_SharedMemory::SSChatMix_SharedMemory(const char* name, UInt32 capacity
 }
 
 SSChatMix_SharedMemory::~SSChatMix_SharedMemory() {
-    if (mIsAttached && mMemoryAddress != 0) {
+    if (mIsAttached && mMemoryAddress != nullptr) {
         // Unmap memory
-        mach_vm_deallocate(mach_task_self(), mMemoryAddress, mMemorySize);
-        mMemoryAddress = 0;
+        munmap(mMemoryAddress, mMemorySize);
+        mMemoryAddress = nullptr;
     }
     
-    if (mIsWriter && mMemoryPort != MACH_PORT_NULL) {
-        // Destroy memory object (writer only)
-        mach_port_deallocate(mach_task_self(), mMemoryPort);
-        mMemoryPort = MACH_PORT_NULL;
+    if (mIsWriter) {
+        // Unlink shared memory object (writer/creator only)
+        shm_unlink(mName);
     }
 }
 
 bool SSChatMix_SharedMemory::InitializeAsWriter() {
     if (mIsAttached) {
+        fprintf(stderr, "[SSChatMix] InitializeAsWriter: already attached\n");
+        os_log_error(OS_LOG_DEFAULT, "[SSChatMix] InitializeAsWriter: already attached");
         return false;
     }
     
-    // Allocate shared memory
-    kern_return_t kr = mach_vm_allocate(
-        mach_task_self(),
-        &mMemoryAddress,
-        mMemorySize,
-        VM_FLAGS_ANYWHERE
-    );
+    fprintf(stderr, "[SSChatMix] InitializeAsWriter: creating shared memory '%s' size=%zu\n", mName, mMemorySize);
+    os_log(OS_LOG_DEFAULT, "[SSChatMix] InitializeAsWriter: creating shared memory '%{public}s' size=%zu", mName, mMemorySize);
     
-    if (kr != KERN_SUCCESS) {
+    // Use POSIX shared memory (more compatible with sandboxed environments)
+    // Unlink any existing shared memory first
+    shm_unlink(mName);
+    
+    // Create new shared memory object
+    int fd = shm_open(mName, O_CREAT | O_RDWR, 0600);
+    if (fd < 0) {
+        fprintf(stderr, "[SSChatMix] InitializeAsWriter: shm_open failed: %d (%s)\n", errno, strerror(errno));
+        os_log_error(OS_LOG_DEFAULT, "[SSChatMix] InitializeAsWriter: shm_open failed: %d (%{public}s)", errno, strerror(errno));
         return false;
     }
     
-    // Make memory region shared
-    kr = mach_make_memory_entry_64(
-        mach_task_self(),
-        &mMemorySize,
-        mMemoryAddress,
-        VM_PROT_READ | VM_PROT_WRITE,
-        &mMemoryPort,
-        MACH_PORT_NULL
-    );
-    
-    if (kr != KERN_SUCCESS) {
-        mach_vm_deallocate(mach_task_self(), mMemoryAddress, mMemorySize);
-        mMemoryAddress = 0;
+    // Set size
+    if (ftruncate(fd, mMemorySize) != 0) {
+        close(fd);
+        shm_unlink(mName);
         return false;
     }
     
-    // Register memory port with bootstrap server so app can find it
-    kr = bootstrap_register(bootstrap_port, mName, mMemoryPort);
-    if (kr != KERN_SUCCESS) {
-        // Try to check out first (in case old instance exists)
-        mach_port_t oldPort = MACH_PORT_NULL;
-        bootstrap_check_in(bootstrap_port, mName, &oldPort);
-        if (oldPort != MACH_PORT_NULL) {
-            mach_port_deallocate(mach_task_self(), oldPort);
-        }
-        
-        // Try register again
-        kr = bootstrap_register(bootstrap_port, mName, mMemoryPort);
-        if (kr != KERN_SUCCESS) {
-            mach_port_deallocate(mach_task_self(), mMemoryPort);
-            mach_vm_deallocate(mach_task_self(), mMemoryAddress, mMemorySize);
-            mMemoryPort = MACH_PORT_NULL;
-            mMemoryAddress = 0;
-            return false;
-        }
+    // Map memory
+    mMemoryAddress = mmap(NULL, mMemorySize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);  // Can close fd after mmap
+    
+    if (mMemoryAddress == MAP_FAILED) {
+        shm_unlink(mName);
+        mMemoryAddress = nullptr;
+        return false;
     }
     
     // Set up pointers
     mRingBuffer = reinterpret_cast<SSChatMix_SharedRingBuffer*>(mMemoryAddress);
-    mAudioData = reinterpret_cast<Float32*>(mMemoryAddress + sizeof(SSChatMix_SharedRingBuffer));
+    mAudioData = reinterpret_cast<Float32*>(static_cast<char*>(mMemoryAddress) + sizeof(SSChatMix_SharedRingBuffer));
     
     // Initialize ring buffer metadata
     mRingBuffer->capacityFrames = mCapacityFrames;
@@ -115,6 +98,9 @@ bool SSChatMix_SharedMemory::InitializeAsWriter() {
     
     mIsWriter = true;
     mIsAttached = true;
+    
+    fprintf(stderr, "[SSChatMix] InitializeAsWriter: SUCCESS - shared memory '%s' created\n", mName);
+    os_log(OS_LOG_DEFAULT, "[SSChatMix] InitializeAsWriter: SUCCESS - shared memory '%{public}s' created", mName);
     return true;
 }
 
@@ -123,36 +109,24 @@ bool SSChatMix_SharedMemory::AttachAsReader() {
         return false;
     }
     
-    // Look up memory port from bootstrap server
-    kern_return_t kr = bootstrap_look_up(bootstrap_port, mName, &mMemoryPort);
-    if (kr != KERN_SUCCESS) {
+    // Open existing shared memory object
+    int fd = shm_open(mName, O_RDWR, 0600);
+    if (fd < 0) {
         return false;
     }
     
-    // Map memory into our address space
-    kr = mach_vm_map(
-        mach_task_self(),
-        &mMemoryAddress,
-        mMemorySize,
-        0,  // mask
-        VM_FLAGS_ANYWHERE,
-        mMemoryPort,
-        0,  // offset
-        FALSE,  // copy
-        VM_PROT_READ,
-        VM_PROT_READ,
-        VM_INHERIT_NONE
-    );
+    // Map memory
+    mMemoryAddress = mmap(NULL, mMemorySize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);  // Can close fd after mmap
     
-    if (kr != KERN_SUCCESS) {
-        mach_port_deallocate(mach_task_self(), mMemoryPort);
-        mMemoryPort = MACH_PORT_NULL;
+    if (mMemoryAddress == MAP_FAILED) {
+        mMemoryAddress = nullptr;
         return false;
     }
     
     // Set up pointers
     mRingBuffer = reinterpret_cast<SSChatMix_SharedRingBuffer*>(mMemoryAddress);
-    mAudioData = reinterpret_cast<Float32*>(mMemoryAddress + sizeof(SSChatMix_SharedRingBuffer));
+    mAudioData = reinterpret_cast<Float32*>(static_cast<char*>(mMemoryAddress) + sizeof(SSChatMix_SharedRingBuffer));
     
     mIsWriter = false;
     mIsAttached = true;

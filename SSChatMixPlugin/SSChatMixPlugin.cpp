@@ -93,12 +93,10 @@ static SSChatMix_Object* GetObjectByObjectID(AudioObjectID inObjectID) {
         obj = &plugin.GetGameDevice();
     } else if (inObjectID == kObjectID_ChatDevice) {
         obj = &plugin.GetChatDevice();
-    } else if (inObjectID == kObjectID_GameDevice_InputStream ||
-               inObjectID == kObjectID_GameDevice_OutputStream ||
+    } else if (inObjectID == kObjectID_GameDevice_OutputStream ||
                inObjectID == kObjectID_GameDevice_VolumeControl) {
         obj = &plugin.GetGameDevice();
-    } else if (inObjectID == kObjectID_ChatDevice_InputStream ||
-               inObjectID == kObjectID_ChatDevice_OutputStream ||
+    } else if (inObjectID == kObjectID_ChatDevice_OutputStream ||
                inObjectID == kObjectID_ChatDevice_VolumeControl) {
         obj = &plugin.GetChatDevice();
     }
@@ -115,13 +113,35 @@ void* SSChatMixPlugIn_Create(CFAllocatorRef inAllocator, CFUUIDRef inRequestedTy
     
     #pragma unused(inAllocator)
     
+    FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
+    if (log) {
+        fprintf(log, "SSChatMixPlugIn_Create called\n");
+        fclose(log);
+    }
+    
     void* theAnswer = NULL;
     
     if (CFEqual(inRequestedTypeUUID, kAudioServerPlugInTypeUUID)) {
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "Type UUID matches, returning driver ref and calling GetInstance()\n");
+            fclose(log);
+        }
         theAnswer = gAudioServerPlugInDriverRef;
         
         // Initialize the plugin singleton
         SSChatMix_PlugIn::GetInstance();
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "GetInstance() returned\n");
+            fclose(log);
+        }
+    } else {
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "Type UUID does NOT match\n");
+            fclose(log);
+        }
     }
     
     return theAnswer;
@@ -227,24 +247,75 @@ static ULONG SSChatMixPlugIn_Release(void* inDriver) {
 static OSStatus SSChatMixPlugIn_Initialize(AudioServerPlugInDriverRef inDriver, AudioServerPlugInHostRef inHost) {
     // Get the driver initialized. Store the AudioServerPlugInHostRef.
     
+    FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
+    if (log) {
+        fprintf(log, "SSChatMixPlugIn_Initialize called!\n");
+        fflush(log);
+        fclose(log);
+    }
+    
     OSStatus theAnswer = 0;
     
     try {
         // Check the arguments
         if (inDriver != gAudioServerPlugInDriverRef) {
+            log = fopen("/tmp/sschatmix_plugin.log", "a");
+            if (log) {
+                fprintf(log, "ERROR: inDriver != gAudioServerPlugInDriverRef\n");
+                fflush(log);
+                fclose(log);
+            }
             throw CAException(kAudioHardwareBadObjectError);
         }
         
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "Calling SetHost()\n");
+            fflush(log);
+            fclose(log);
+        }
         // Store the AudioServerPlugInHostRef
         SSChatMix_PlugIn::SetHost(inHost);
         
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "Calling GetInstance()\n");
+            fflush(log);
+            fclose(log);
+        }
         // Init/activate the devices
         SSChatMix_PlugIn::GetInstance();
         
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "GetInstance() returned successfully\n");
+            fflush(log);
+            fclose(log);
+        }
+        
     } catch(const CAException& inException) {
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "CAException caught: error=%d\n", inException.GetError());
+            fflush(log);
+            fclose(log);
+        }
         theAnswer = inException.GetError();
     } catch(...) {
+        log = fopen("/tmp/sschatmix_plugin.log", "a");
+        if (log) {
+            fprintf(log, "Unknown exception caught\n");
+            fflush(log);
+            fclose(log);
+        }
         theAnswer = kAudioHardwareUnspecifiedError;
+    }
+    
+    log = fopen("/tmp/sschatmix_plugin.log", "a");
+    if (log) {
+        fprintf(log, "SSChatMixPlugIn_Initialize returning %d\n", theAnswer);
+        fflush(log);
+        fclose(log);
     }
     
     return theAnswer;
