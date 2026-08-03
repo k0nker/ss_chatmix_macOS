@@ -1,8 +1,10 @@
 import SwiftUI
 import ServiceManagement
+import Sparkle
 
 struct SettingsView: View {
     @ObservedObject var controller: MenuBarController
+    @ObservedObject var updater = SparkleUpdater.shared
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     
     var body: some View {
@@ -125,6 +127,27 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.top, 8)
+                    
+                    Divider()
+                        .padding(.vertical, 12)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Updates")
+                            .font(.headline)
+                        
+                        Toggle("Check for updates automatically", isOn: $updater.isAutomaticallyChecksForUpdates)
+                            .onChange(of: updater.isAutomaticallyChecksForUpdates) { _, newValue in
+                                updater.toggleAutomaticUpdates(newValue)
+                            }
+                        
+                        Button(action: {
+                            updater.checkForUpdates()
+                        }) {
+                            Text("Check Now")
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

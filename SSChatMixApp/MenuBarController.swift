@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Combine
+import Sparkle
 
 class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     var statusItem: NSStatusItem!
@@ -35,6 +36,9 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     
     // Windows
     var settingsWindow: NSWindow?
+    
+    // Sparkle updater
+    let sparkleUpdater = SparkleUpdater.shared
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Create menu bar item
@@ -195,6 +199,11 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         }
         
         menu.addItem(NSMenuItem.separator())
+        
+        // Check for Updates
+        let updateItem = NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: "")
+        updateItem.target = self
+        menu.addItem(updateItem)
         
         // Settings
         let settingsItem = NSMenuItem(title: "Settings...", action: #selector(showSettings), keyEquivalent: ",")
@@ -724,6 +733,10 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         alert.addButton(withTitle: "OK")
         alert.alertStyle = .informational
         alert.runModal()
+    }
+    
+    @objc func checkForUpdates() {
+        sparkleUpdater.checkForUpdates()
     }
     
     @objc func quit() {
