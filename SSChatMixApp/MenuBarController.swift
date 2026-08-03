@@ -382,6 +382,9 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             isRunning = true
             statusMessage = "✅ Running"
             
+            // Update menu to show new status
+            updateMenu()
+            
             print("")
             print("✅ ChatMix Controller started")
             print("   Move the dial to test...")
@@ -661,8 +664,8 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 
                 let window = NSWindow(contentViewController: hostingController)
                 window.title = "SSChatMix Settings"
-                window.styleMask = [.titled, .closable, .resizable]
-                window.setContentSize(NSSize(width: 550, height: 600))
+                window.styleMask = [.titled, .closable]
+                window.setContentSize(NSSize(width: 600, height: 400))
                 window.center()
                 
                 self.settingsWindow = window

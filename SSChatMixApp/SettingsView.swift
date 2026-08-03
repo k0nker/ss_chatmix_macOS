@@ -6,137 +6,132 @@ struct SettingsView: View {
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     
     var body: some View {
-        Form {
-            Section {
+        VStack(spacing: 0) {
+            // Header with status
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("SSChatMix")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(controller.isRunning ? Color.green : Color.gray)
+                            .frame(width: 8, height: 8)
+                        Text(controller.isRunning ? "Running" : "Not Running")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+                
                 Toggle("Launch at Login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, newValue in
                         setLoginItemEnabled(newValue)
                     }
-            } header: {
-                Text("General")
             }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
             
-            Section {
-                Picker("ChatMix Device:", selection: $controller.selectedChatMixDevice) {
-                    Text("Select Device...").tag(nil as ChatMixDevice?)
-                    ForEach(controller.availableChatMixDevices, id: \.self) { device in
-                        Text("\(device.productName) (VID: \(String(format: "0x%04X", device.vendorID)) PID: \(String(format: "0x%04X", device.productID)))")
-                            .tag(device as ChatMixDevice?)
-                    }
-                }
-                .labelsHidden()
-                .onChange(of: controller.selectedChatMixDevice) { _, newDevice in
-                    if let device = newDevice {
-                        controller.selectChatMixDevice(device)
-                    }
-                }
-                
-                if let device = controller.selectedChatMixDevice {
-                    HStack {
-                        Text("Status:")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(controller.isRunning ? Color.green : Color.gray)
-                                .frame(width: 8, height: 8)
-                            Text(controller.isRunning ? "Connected" : "Not Running")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+            Divider()
+            
+            // Main content in two columns
+            HStack(alignment: .top, spacing: 20) {
+                // Left column - Device Selection
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Devices")
+                        .font(.headline)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        DevicePickerRow(
+                            icon: "dial.medium",
+                            label: "ChatMix Dial",
+                            selection: $controller.selectedChatMixDevice,
+                            devices: controller.availableChatMixDevices
+                        ) { device in
+                            "\(device.productName)"
+                        } onChange: { device in
+                            if let device = device {
+                                controller.selectChatMixDevice(device)
+                            }
+                        }
+                        
+                        DevicePickerRow(
+                            icon: "gamecontroller.fill",
+                            label: "Game Audio",
+                            selection: $controller.selectedGameDevice,
+                            devices: controller.availableAudioDevices
+                        ) { device in
+                            device.name
+                        } onChange: { device in
+                            if let device = device {
+                                controller.selectGameDevice(device)
+                            }
+                        }
+                        
+                        DevicePickerRow(
+                            icon: "message.fill",
+                            label: "Chat Audio",
+                            selection: $controller.selectedChatDevice,
+                            devices: controller.availableAudioDevices
+                        ) { device in
+                            device.name
+                        } onChange: { device in
+                            if let device = device {
+                                controller.selectChatDevice(device)
+                            }
+                        }
+                        
+                        DevicePickerRow(
+                            icon: "headphones",
+                            label: "Output",
+                            selection: $controller.selectedOutputDevice,
+                            devices: controller.availableAudioDevices
+                        ) { device in
+                            device.name
+                        } onChange: { device in
+                            if let device = device {
+                                controller.selectOutputDevice(device)
+                            }
                         }
                     }
                 }
-            } header: {
-                Text("ChatMix Dial")
-            } footer: {
-                Text("Select your SteelSeries Arctis Nova ChatMix dial.")
-                    .font(.caption)
-            }
-            
-            Section {
-                Picker("Game Audio:", selection: $controller.selectedGameDevice) {
-                    Text("Select Device...").tag(nil as AudioDeviceInfo?)
-                    ForEach(controller.availableAudioDevices, id: \.self) { device in
-                        Text(device.name).tag(device as AudioDeviceInfo?)
-                    }
-                }
-                .labelsHidden()
-                .onChange(of: controller.selectedGameDevice) { _, newDevice in
-                    if let device = newDevice {
-                        controller.selectGameDevice(device)
-                    }
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Picker("Chat Audio:", selection: $controller.selectedChatDevice) {
-                    Text("Select Device...").tag(nil as AudioDeviceInfo?)
-                    ForEach(controller.availableAudioDevices, id: \.self) { device in
-                        Text(device.name).tag(device as AudioDeviceInfo?)
-                    }
-                }
-                .labelsHidden()
-                .onChange(of: controller.selectedChatDevice) { _, newDevice in
-                    if let device = newDevice {
-                        controller.selectChatDevice(device)
-                    }
-                }
-            } header: {
-                Text("Virtual Audio Devices")
-            } footer: {
-                Text("Route game audio to the first device and chat/Discord to the second device.")
-                    .font(.caption)
-            }
-            
-            Section {
-                Picker("Output Device:", selection: $controller.selectedOutputDevice) {
-                    Text("Select Device...").tag(nil as AudioDeviceInfo?)
-                    ForEach(controller.availableAudioDevices, id: \.self) { device in
-                        Text(device.name).tag(device as AudioDeviceInfo?)
-                    }
-                }
-                .labelsHidden()
-                .onChange(of: controller.selectedOutputDevice) { _, newDevice in
-                    if let device = newDevice {
-                        controller.selectOutputDevice(device)
-                    }
-                }
-            } header: {
-                Text("Physical Output")
-            } footer: {
-                Text("Your actual headphones or speakers where you'll hear the mixed audio.")
-                    .font(.caption)
-            }
-            
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "gamecontroller.fill")
-                            .foregroundColor(.blue)
-                        Text("Game Volume: \(controller.gameVolume)%")
-                        Spacer()
-                        ProgressView(value: Double(controller.gameVolume), total: 100)
-                            .frame(width: 100)
+                Divider()
+                
+                // Right column - Live Mix
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Live Mix")
+                        .font(.headline)
+                    
+                    VStack(spacing: 16) {
+                        VolumeBar(
+                            icon: "gamecontroller.fill",
+                            label: "Game",
+                            value: controller.gameVolume,
+                            color: .blue
+                        )
+                        
+                        VolumeBar(
+                            icon: "message.fill",
+                            label: "Chat",
+                            value: controller.chatVolume,
+                            color: .green
+                        )
                     }
                     
-                    HStack {
-                        Image(systemName: "message.fill")
-                            .foregroundColor(.green)
-                        Text("Chat Volume: \(controller.chatVolume)%")
-                        Spacer()
-                        ProgressView(value: Double(controller.chatVolume), total: 100)
-                            .frame(width: 100)
-                    }
+                    Text("Adjust the ChatMix dial to change the balance.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 8)
                 }
-            } header: {
-                Text("Live Volume Mix")
-            } footer: {
-                Text("Adjust the ChatMix dial to change the balance.")
-                    .font(.caption)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding()
         }
-        .formStyle(.grouped)
-        .frame(width: 550, height: 600)
+        .frame(width: 600, height: 400)
         .onAppear {
-            // Load current login item status
             updateLoginItemStatus()
         }
     }
@@ -157,6 +152,79 @@ struct SettingsView: View {
     
     private func updateLoginItemStatus() {
         launchAtLogin = SMAppService.mainApp.status == .enabled
+    }
+}
+
+// Reusable device picker row component
+struct DevicePickerRow<T: Hashable>: View {
+    let icon: String
+    let label: String
+    @Binding var selection: T?
+    let devices: [T]
+    let deviceLabel: (T) -> String
+    let onChange: (T?) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 16)
+                Text(label)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            
+            Picker("", selection: $selection) {
+                Text("Select Device...").tag(nil as T?)
+                ForEach(devices, id: \.self) { device in
+                    Text(deviceLabel(device)).tag(device as T?)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: selection) { _, newValue in
+                onChange(newValue)
+            }
+        }
+    }
+}
+
+// Reusable volume bar component
+struct VolumeBar: View {
+    let icon: String
+    let label: String
+    let value: Int
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .foregroundColor(color)
+                    .frame(width: 16)
+                Text(label)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Spacer()
+                Text("\(value)%")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+            
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Background
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                    
+                    // Fill
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(color.opacity(0.7))
+                        .frame(width: geometry.size.width * CGFloat(value) / 100)
+                }
+            }
+            .frame(height: 8)
+        }
     }
 }
 
