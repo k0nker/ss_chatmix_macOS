@@ -41,6 +41,7 @@ enum {
     kObjectID_GameDevice_OutputStream = 5,
     kObjectID_ChatDevice_InputStream  = 6,
     kObjectID_ChatDevice_OutputStream = 7,
+    kObjectID_VolumeControl         = 8,
 };
 
 // Plugin entry point (required by AudioServerPlugIn API)
