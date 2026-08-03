@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 import Combine
+import CoreAudio
 import Sparkle
-import AVFoundation
 
 class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     var statusItem: NSStatusItem!
@@ -10,7 +10,11 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     // Core components running in-process
     private var hidController: HIDController?
     private var audioController = AudioController()
-    private var audioMonitor: AudioMonitor?
+    private var audioRouter: AudioRouter?
+    
+    // Device IDs for volume control
+    private var gameDeviceID: AudioDeviceID?
+    private var chatDeviceID: AudioDeviceID?
     
     // Current configuration
     private var config: Config?
@@ -70,23 +74,16 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 print("   Output: \(config!.outputDeviceUid ?? "not set")")
                 print("   HID: \(config!.hidDevice.vendorId):\(config!.hidDevice.productId)")
                 
-                // Request permission and start controller when ready
-                #if os(macOS)
-                if #available(macOS 14.0, *) {
-                    requestMicrophonePermissionThenStart()
-                } else {
-                    startController()
-                }
-                #else
+                // Start controller (no permissions needed!)
                 startController()
-                #endif
             } catch {
                 print("Config error: \(error)")
                 statusMessage = "Config error"
             }
         } else {
             print("No config file found at: \(configManager.getConfigPath())")
-            print("   Select devices from menu to configure")
+            print("   Using SSChatMix defaults...")
+            tryCreateDefaultConfig()
         }
     }
     
@@ -241,67 +238,69 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
     
-    // MARK: - Microphone Permission
+    // MARK: - Default Configuration
     
-    /// Request microphone permission and start controller when granted
-    /// Prevents race condition by waiting for permission before starting audio
-    private func requestMicrophonePermissionThenStart() {
-        let status = AVCaptureDevice.authorizationStatus(for: .audio)
-        print("🎤 Microphone permission status: \\(status.rawValue)")
-        
-        switch status {
-        case .authorized:
-            print("✅ Microphone permission already authorized")
+    /// Try to create a default configuration using SSChatMix devices
+    private func tryCreateDefaultConfig() {
+        do {
+            // Try to find SSChatMix devices
+            guard let gameDevice = try audioController.findSSChatMixGameDevice(),
+                  let chatDevice = try audioController.findSSChatMixChatDevice() else {
+                print("SSChatMix devices not found - user must configure manually")
+                statusMessage = "Configure devices in Settings"
+                return
+            }
+            
+            print("Found SSChatMix devices - creating default config")
+            print("   Game: \(gameDevice.name)")
+            print("   Chat: \(chatDevice.name)")
+            
+            // Find first non-virtual output device as default
+            let devices = try audioController.listOutputDevices()
+            guard let outputDevice = devices.first(where: { !$0.name.contains("SSChatMix") && !$0.name.contains("BlackHole") }) else {
+                print("No physical output device found")
+                statusMessage = "Configure output device in Settings"
+                return
+            }
+            
+            // Create default config
+            let defaultConfig = Config(
+                audioDevices: AudioDevicesConfig(
+                    game: AudioDeviceConfig(
+                        id: String(gameDevice.id),
+                        name: gameDevice.name,
+                        uid: gameDevice.uid,
+                        isAggregate: false
+                    ),
+                    chat: AudioDeviceConfig(
+                        id: String(chatDevice.id),
+                        name: chatDevice.name,
+                        uid: chatDevice.uid,
+                        isAggregate: false
+                    )
+                ),
+                hidDevice: HIDDeviceConfig(
+                    vendorId: "0x1038",
+                    productId: "0x2202"
+                ),
+                launchAgentEnabled: false,
+                outputDeviceUid: outputDevice.uid
+            )
+            
+            try configManager.save(defaultConfig)
+            config = defaultConfig
+            
+            print("Created default config with output: \(outputDevice.name)")
+            print("Starting controller...")
+            
+            // Reload devices and start
+            loadAvailableDevices()
             startController()
             
-        case .notDetermined:
-            print("🎤 Requesting microphone permission...")
-            statusMessage = "Waiting for permission..."
-            updateMenu()
-            
-            AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
-                DispatchQueue.main.async {
-                    if granted {
-                        print("✅ Microphone permission granted")
-                        self?.startController()
-                    } else {
-                        print("❌ Microphone permission denied - cannot start")
-                        self?.statusMessage = "Microphone permission denied"
-                        self?.updateMenu()
-                    }
-                }
-            }
-            
-        case .denied, .restricted:
-            print("❌ Microphone permission denied or restricted")
-            print("   Go to System Settings > Privacy & Security > Microphone")
-            statusMessage = "Microphone permission denied"
-            updateMenu()
-            
-        @unknown default:
-            print("⚠️ Unknown microphone permission status")
-            statusMessage = "Permission error"
-            updateMenu()
+        } catch {
+            print("Failed to create default config: \(error)")
+            statusMessage = "Configure devices in Settings"
         }
-    }
-    
-    /// Start controller with permission check (for manual restart/reload)
-    private func startControllerWithPermissionCheck() {
-        #if os(macOS)
-        if #available(macOS 14.0, *) {
-            let status = AVCaptureDevice.authorizationStatus(for: .audio)
-            if status == .authorized {
-                startController()
-            } else {
-                print("⚠️ Cannot start - microphone permission not granted")
-                print("   Go to System Settings > Privacy & Security > Microphone")
-                statusMessage = "Microphone permission denied"
-                updateMenu()
-            }
-            return
-        }
-        #endif
-        startController()
     }
     
     // MARK: - Menu Bar
@@ -531,30 +530,47 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         stopController()
         
         do {
-            // Find audio devices
-            guard let gameDeviceID = try audioController.findDevice(byUID: config.audioDevices.game.uid) else {
+            // Find audio devices (SSChatMix virtual devices)
+            guard let foundGameDeviceID = try audioController.findDevice(byUID: config.audioDevices.game.uid) else {
                 statusMessage = "Game device not found"
                 print("Game device not found: \(config.audioDevices.game.uid)")
+                print("   Make sure SSChatMixPlugin is installed at /Library/Audio/Plug-Ins/HAL/")
                 return
             }
             
-            guard let chatDeviceID = try audioController.findDevice(byUID: config.audioDevices.chat.uid) else {
+            guard let foundChatDeviceID = try audioController.findDevice(byUID: config.audioDevices.chat.uid) else {
                 statusMessage = "Chat device not found"
                 print("Chat device not found: \(config.audioDevices.chat.uid)")
+                print("   Make sure SSChatMixPlugin is installed at /Library/Audio/Plug-Ins/HAL/")
                 return
             }
             
+            // Store device IDs for volume control
+            self.gameDeviceID = foundGameDeviceID
+            self.chatDeviceID = foundChatDeviceID
+            
+            print("Found SSChatMix devices:")
+            print("   Game: Device \(foundGameDeviceID)")
+            print("   Chat: Device \(foundChatDeviceID)")
+            print("")
+            
+            // Find output device
             guard let outputUID = config.outputDeviceUid,
-                  let outputDeviceID = try audioController.findDevice(byUID: outputUID) else {
+                  let foundOutputDeviceID = try audioController.findDevice(byUID: outputUID) else {
                 statusMessage = "Output device not found"
-                print("Output device not found: \(config.outputDeviceUid ?? "nil")")
+                print("Output device not found: \(config.outputDeviceUid ?? "none")")
                 return
             }
             
-            print("Starting audio monitoring...")
-            print("   Game input: Device \(gameDeviceID)")
-            print("   Chat input: Device \(chatDeviceID)")
-            print("   Output: Device \(outputDeviceID)")
+            print("Output device: \(foundOutputDeviceID)")
+            print("")
+            print("Audio Flow:")
+            print("  1. Apps write to SSChatMix virtual output streams")
+            print("  2. Plugin stores in ring buffers (loopback)")
+            print("  3. Swift app reads from SSChatMix input streams")
+            print("  4. Swift app mixes Game + Chat with volumes")
+            print("  5. Swift app writes to physical output device")
+            print("")
             
             // Configure HID controller
             let vendorID = Int(config.hidDevice.vendorId.dropFirst(2), radix: 16) ?? 0x1038
@@ -567,36 +583,36 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             hidController = HIDController()
             hidController?.configure(vendorID: vendorID, productID: productID)
             
-            // Create audio monitor
-            let monitor = AudioMonitor(
-                gameDeviceID: gameDeviceID,
-                chatDeviceID: chatDeviceID,
-                outputDeviceID: outputDeviceID
-            )
-            try monitor.start()
-            audioMonitor = monitor
-            
-            print("Audio monitoring started")
-            
-            // Set up HID callback
-            hidController?.onDialChanged = { [weak self, weak monitor] gameVol, chatVol in
-                // Update audio volumes immediately (time-critical)
-                monitor?.updateVolumes(
-                    game: Float(gameVol) / 100.0,
-                    chat: Float(chatVol) / 100.0
-                )
+            // Set up HID callback to control volumes
+            hidController?.onDialChanged = { [weak self] gameVol, chatVol in
+                guard let self = self else { return }
+                
+                // Update audio router volumes (real-time mixing)
+                self.audioRouter?.updateVolumes(game: Float(gameVol), chat: Float(chatVol))
                 
                 // Update UI asynchronously (non-blocking)
-                DispatchQueue.main.async { [weak self] in
-                    self?.gameVolume = gameVol
-                    self?.chatVolume = chatVol
+                DispatchQueue.main.async {
+                    self.gameVolume = gameVol
+                    self.chatVolume = chatVol
                 }
             }
             
-            // Start listening
+            // Start listening to HID
             print("Starting HID controller...")
             try hidController?.start()
             print("HID controller started")
+            
+            // Start audio routing
+            print("Starting audio router...")
+            let router = AudioRouter(
+                gameDeviceID: foundGameDeviceID,
+                chatDeviceID: foundChatDeviceID,
+                outputDeviceID: foundOutputDeviceID
+            )
+            try router.start()
+            router.updateVolumes(game: 50.0, chat: 50.0) // Initial 50/50 balance
+            self.audioRouter = router
+            print("Audio router started")
             
             isRunning = true
             statusMessage = "Running"
@@ -605,32 +621,11 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             updateMenu()
             
             print("")
-            print("ChatMix Controller started")
-            print("   Move the dial to test...")
+            print("✅ SSChatMix started successfully!")
+            print("   Move the dial to adjust Game/Chat balance")
+            print("   Audio is now routing through loopback devices")
+            print("")
             
-        } catch AudioMonitorError.permissionDenied {
-            print("Microphone permission denied")
-            statusMessage = "Microphone permission required"
-            isRunning = false
-            updateMenuBarIcon()
-            
-            // Show alert to user
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "Microphone Permission Required"
-                alert.informativeText = "SSChatMix needs microphone access to capture audio from virtual devices.\n\nPlease grant microphone permission in:\nSystem Settings > Privacy & Security > Microphone\n\nThen restart the app."
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Open System Settings")
-                alert.addButton(withTitle: "OK")
-                
-                let response = alert.runModal()
-                if response == .alertFirstButtonReturn {
-                    // Open System Settings to Privacy > Microphone
-                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
-            }
         } catch {
             print("Controller start failed: \(error)")
             statusMessage = "Error: \(error.localizedDescription)"
@@ -640,10 +635,12 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     }
     
     func stopController() {
-        audioMonitor?.stop()
-        audioMonitor = nil
+        audioRouter?.stop()
+        audioRouter = nil
         hidController?.stop()
         hidController = nil
+        gameDeviceID = nil
+        chatDeviceID = nil
         isRunning = false
         updateMenuBarIcon()
     }
@@ -651,7 +648,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     @objc func restartController() {
         stopController()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.startControllerWithPermissionCheck()
+            self?.startController()
         }
     }
     
@@ -676,7 +673,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 
                 // Restart with new config
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                    self?.startControllerWithPermissionCheck()
+                    self?.startController()
                     self?.updateMenu()
                 }
             } catch {

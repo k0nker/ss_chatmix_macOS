@@ -10,8 +10,8 @@
 		A1012B7C301FE5920016B995 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B7B301FE5920016B995 /* SettingsView.swift */; };
 		A1012B7E301FE5920016B995 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B7A301FE5920016B995 /* MenuBarController.swift */; };
 		A1012B85301FE7BA0016B995 /* AudioController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B7F301FE7BA0016B995 /* AudioController.swift */; };
+		A1ROUTER0001234560099AAA /* AudioRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1ROUTER0001234550099AAA /* AudioRouter.swift */; };
 		A1012B86301FE7BA0016B995 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B81301FE7BA0016B995 /* Config.swift */; };
-		A1012B87301FE7BA0016B995 /* AudioMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B80301FE7BA0016B995 /* AudioMonitor.swift */; };
 		A1012B88301FE7BA0016B995 /* ConfigManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B82301FE7BA0016B995 /* ConfigManager.swift */; };
 		A1012B89301FE7BA0016B995 /* HIDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B83301FE7BA0016B995 /* HIDController.swift */; };
 		A1012B8A301FE7BA0016B995 /* SSChatMixApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1012B84301FE7BA0016B995 /* SSChatMixApp.swift */; };
@@ -21,6 +21,8 @@
 		A122D40C30209BF100000BF4 /* SSChatMixPlugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D40730209BF100000BF4 /* SSChatMixPlugin.cpp */; };
 		A122D40D30209BF100000BF4 /* SSChatMix_Object.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D40130209BF100000BF4 /* SSChatMix_Object.cpp */; };
 		A122D40E30209BF100000BF4 /* SSChatMix_PlugIn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D40330209BF100000BF4 /* SSChatMix_PlugIn.cpp */; };
+		A122D41030209BF100000BF4 /* SSChatMix_RingBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D41130209BF100000BF4 /* SSChatMix_RingBuffer.cpp */; };
+		A122D41230209BF100000BF4 /* SSChatMix_Mixer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D41330209BF100000BF4 /* SSChatMix_Mixer.cpp */; };
 		A122D40F30209BF100000BF4 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A122D3FB30209BF100000BF4 /* Info.plist */; };
 		A1ASSETS001234560099A3FA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1ASSETS001234550099A3FA /* Assets.xcassets */; };
 		A1B271E23020727E00DFA33E /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B271E13020727E00DFA33E /* CoreAudio.framework */; };
@@ -33,7 +35,7 @@
 		A1012B7A301FE5920016B995 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1012B7B301FE5920016B995 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1012B7F301FE7BA0016B995 /* AudioController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioController.swift; sourceTree = "<group>"; };
-		A1012B80301FE7BA0016B995 /* AudioMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioMonitor.swift; sourceTree = "<group>"; };
+		A1ROUTER0001234550099AAA /* AudioRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRouter.swift; sourceTree = "<group>"; };
 		A1012B81301FE7BA0016B995 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		A1012B82301FE7BA0016B995 /* ConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigManager.swift; sourceTree = "<group>"; };
 		A1012B83301FE7BA0016B995 /* HIDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIDController.swift; sourceTree = "<group>"; };
@@ -51,6 +53,10 @@
 		A122D40530209BF100000BF4 /* SSChatMix_Stream.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_Stream.cpp; sourceTree = "<group>"; };
 		A122D40630209BF100000BF4 /* SSChatMixPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMixPlugin.h; sourceTree = "<group>"; };
 		A122D40730209BF100000BF4 /* SSChatMixPlugin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMixPlugin.cpp; sourceTree = "<group>"; };
+		A122D40830209BF100000BF4 /* SSChatMix_RingBuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_RingBuffer.h; sourceTree = "<group>"; };
+		A122D41130209BF100000BF4 /* SSChatMix_RingBuffer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_RingBuffer.cpp; sourceTree = "<group>"; };
+		A122D41430209BF100000BF4 /* SSChatMix_Mixer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_Mixer.h; sourceTree = "<group>"; };
+		A122D41330209BF100000BF4 /* SSChatMix_Mixer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_Mixer.cpp; sourceTree = "<group>"; };
 		A1AFADB1301FE026001ED19B /* SSChatMix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SSChatMix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1ASSETS001234550099A3FA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1B271D73020708400DFA33E /* SSChatMixPlugin.driver */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SSChatMixPlugin.driver; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -88,7 +94,7 @@
 			isa = PBXGroup;
 			children = (
 				A1012B7F301FE7BA0016B995 /* AudioController.swift */,
-				A1012B80301FE7BA0016B995 /* AudioMonitor.swift */,
+				A1ROUTER0001234550099AAA /* AudioRouter.swift */,
 				A1012B81301FE7BA0016B995 /* Config.swift */,
 				A1012B82301FE7BA0016B995 /* ConfigManager.swift */,
 				A1012B83301FE7BA0016B995 /* HIDController.swift */,
@@ -117,6 +123,10 @@
 				A122D40530209BF100000BF4 /* SSChatMix_Stream.cpp */,
 				A122D40630209BF100000BF4 /* SSChatMixPlugin.h */,
 				A122D40730209BF100000BF4 /* SSChatMixPlugin.cpp */,
+				A122D40830209BF100000BF4 /* SSChatMix_RingBuffer.h */,
+				A122D41130209BF100000BF4 /* SSChatMix_RingBuffer.cpp */,
+				A122D41430209BF100000BF4 /* SSChatMix_Mixer.h */,
+				A122D41330209BF100000BF4 /* SSChatMix_Mixer.cpp */,
 			);
 			path = SSChatMixPlugin;
 			sourceTree = "<group>";
@@ -247,8 +257,8 @@
 			files = (
 				A1012B7C301FE5920016B995 /* SettingsView.swift in Sources */,
 				A1012B85301FE7BA0016B995 /* AudioController.swift in Sources */,
+				A1ROUTER0001234560099AAA /* AudioRouter.swift in Sources */,
 				A1012B86301FE7BA0016B995 /* Config.swift in Sources */,
-				A1012B87301FE7BA0016B995 /* AudioMonitor.swift in Sources */,
 				A1012B88301FE7BA0016B995 /* ConfigManager.swift in Sources */,
 				A1012B89301FE7BA0016B995 /* HIDController.swift in Sources */,
 				A1012B8A301FE7BA0016B995 /* SSChatMixApp.swift in Sources */,
@@ -265,6 +275,8 @@
 				A122D40C30209BF100000BF4 /* SSChatMixPlugin.cpp in Sources */,
 				A122D40D30209BF100000BF4 /* SSChatMix_Object.cpp in Sources */,
 				A122D40E30209BF100000BF4 /* SSChatMix_PlugIn.cpp in Sources */,
+				A122D41030209BF100000BF4 /* SSChatMix_RingBuffer.cpp in Sources */,
+				A122D41230209BF100000BF4 /* SSChatMix_Mixer.cpp in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */

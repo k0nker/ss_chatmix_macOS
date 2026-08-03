@@ -81,6 +81,27 @@ public class AudioController {
         return devices.first(where: { $0.uid == uid })?.id
     }
     
+    // MARK: - SSChatMix Device Detection
+    
+    /// Find the SSChatMix Game virtual device
+    public func findSSChatMixGameDevice() throws -> AudioDeviceInfo? {
+        let devices = try listOutputDevices()
+        return devices.first(where: { $0.uid == "SSChatMixGameDevice" })
+    }
+    
+    /// Find the SSChatMix Chat virtual device
+    public func findSSChatMixChatDevice() throws -> AudioDeviceInfo? {
+        let devices = try listOutputDevices()
+        return devices.first(where: { $0.uid == "SSChatMixChatDevice" })
+    }
+    
+    /// Check if SSChatMix devices are available
+    public func hasSSChatMixDevices() throws -> Bool {
+        let game = try findSSChatMixGameDevice()
+        let chat = try findSSChatMixChatDevice()
+        return game != nil && chat != nil
+    }
+    
     // MARK: - Volume Control
     
     public func setVolume(_ volume: Float, for deviceID: AudioDeviceID) throws {
