@@ -24,9 +24,9 @@ SSChatMix_PlugIn::SSChatMix_PlugIn()
     SSChatMix_Object(kAudioObjectPlugInObject, kAudioPlugInClassID, kAudioObjectClassID, kAudioObjectUnknown),
     mHost(NULL),
     mGameDevice(kObjectID_GameDevice, "SSChatMix Game", kSSChatMixGameDevice_UID, "SSChatMixDevice",
-                kObjectID_GameDevice_InputStream, kObjectID_GameDevice_OutputStream, kObjectID_GameDevice_VolumeControl),
+                kObjectID_GameDevice_OutputStream, kObjectID_GameDevice_VolumeControl),
     mChatDevice(kObjectID_ChatDevice, "SSChatMix Chat", kSSChatMixChatDevice_UID, "SSChatMixDevice",
-                kObjectID_ChatDevice_InputStream, kObjectID_ChatDevice_OutputStream, kObjectID_ChatDevice_VolumeControl)
+                kObjectID_ChatDevice_OutputStream, kObjectID_ChatDevice_VolumeControl)
 {
 }
 

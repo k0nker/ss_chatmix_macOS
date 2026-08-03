@@ -15,38 +15,51 @@ SSChatMix_Device::SSChatMix_Device(AudioObjectID inObjectID,
                                    const char* inDeviceName,
                                    const char* inDeviceUID,
                                    const char* inModelUID,
-                                   AudioObjectID inInputStreamID,
                                    AudioObjectID inOutputStreamID,
                                    AudioObjectID inVolumeControlID)
 :
     SSChatMix_Object(inObjectID, kAudioDeviceClassID, kAudioObjectClassID, kAudioObjectPlugInObject),
     mDeviceName(inDeviceName),
     mDeviceUID(inDeviceUID),
-    mInputStream(inInputStreamID, inObjectID, true, kSSChatMix_SampleRate),  // true = input stream
     mOutputStream(inOutputStreamID, inObjectID, false, kSSChatMix_SampleRate),  // false = output stream
     mVolumeControl(inVolumeControlID, inObjectID, kAudioObjectPropertyScopeOutput, kAudioObjectPropertyElementMain),
     mHostTicksPerFrame(0.0),
     mAnchorHostTime(0),
     mAnchorSampleTime(0.0),
     mIsIORunning(false),
-    mRingBuffer(kSSChatMix_RingBufferFrames, kSSChatMix_Channels)
+    mSharedMemory(nullptr)
 {
+    // Create shared memory buffer with unique name based on device UID
+    // Format: "com.k0nker.sschatmix.<uid>"
+    char sharedMemName[256];
+    snprintf(sharedMemName, sizeof(sharedMemName), "com.k0nker.sschatmix.%s", inDeviceUID);
+    
+    mSharedMemory = new SSChatMix_SharedMemory(sharedMemName, kSSChatMix_RingBufferFrames, kSSChatMix_Channels);
+    
+    // Initialize as writer (plugin side)
+    if (!mSharedMemory->InitializeAsWriter()) {
+        os_log_error(OS_LOG_DEFAULT, "Failed to initialize shared memory for device %s", inDeviceName);
+        delete mSharedMemory;
+        mSharedMemory = nullptr;
+    }
 }
 
 SSChatMix_Device::~SSChatMix_Device() {
+    if (mSharedMemory != nullptr) {
+        delete mSharedMemory;
+        mSharedMemory = nullptr;
+    }
 }
 
 // MARK: - Lifecycle
 
 void SSChatMix_Device::Activate() {
-    mInputStream.Activate();
     mOutputStream.Activate();
     mVolumeControl.Activate();
     SSChatMix_Object::Activate();
 }
 
 void SSChatMix_Device::Deactivate() {
-    mInputStream.Deactivate();
     mOutputStream.Deactivate();
     mVolumeControl.Deactivate();
     SSChatMix_Object::Deactivate();
@@ -75,15 +88,26 @@ bool SSChatMix_Device::IsIORunning() const {
 // MARK: - Audio I/O
 
 UInt32 SSChatMix_Device::WriteAudio(const Float32* data, UInt32 frameCount) {
-    return mRingBuffer.Write(data, frameCount);
+    if (mSharedMemory != nullptr) {
+        return mSharedMemory->Write(data, frameCount);
+    }
+    return 0;
 }
 
 UInt32 SSChatMix_Device::ReadAudio(Float32* data, UInt32 frameCount) {
-    return mRingBuffer.Read(data, frameCount);
+    if (mSharedMemory != nullptr) {
+        return mSharedMemory->Read(data, frameCount);
+    }
+    // Fill with silence if no shared memory
+    memset(data, 0, frameCount * kSSChatMix_Channels * sizeof(Float32));
+    return 0;
 }
 
 UInt32 SSChatMix_Device::GetAvailableFrames() const {
-    return mRingBuffer.GetAvailableFrames();
+    if (mSharedMemory != nullptr) {
+        return mSharedMemory->GetAvailableFrames();
+    }
+    return 0;
 }
 
 // MARK: - Property Operations
