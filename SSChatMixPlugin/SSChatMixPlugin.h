@@ -29,8 +29,11 @@ extern "C" {
 #define kSSChatMix_BitsPerChannel    32
 #define kSSChatMix_BytesPerFrame     (kSSChatMix_Channels * sizeof(Float32))
 
-// Ring buffer size (2 seconds of audio)
+// Ring buffer size (2 seconds of audio for buffering)
 #define kSSChatMix_RingBufferFrames  (kSSChatMix_SampleRate * 2)
+
+// IO buffer period (frames per IO cycle - affects latency)
+#define kSSChatMix_IOBufferPeriod    2048
 
 // Object IDs for all HAL objects this driver publishes
 enum {
