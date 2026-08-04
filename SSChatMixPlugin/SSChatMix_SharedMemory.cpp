@@ -44,47 +44,68 @@ SSChatMix_SharedMemory::~SSChatMix_SharedMemory() {
 }
 
 bool SSChatMix_SharedMemory::InitializeAsWriter() {
+    FILE* logFile = fopen("/tmp/sschatmix_plugin.log", "a");
+    if (logFile) fprintf(logFile, "=== InitializeAsWriter START for %s (size %zu) ===\n", mName, mMemorySize);
+    
     if (mIsAttached) {
         fprintf(stderr, "[SSChatMix] InitializeAsWriter: already attached\n");
         os_log_error(OS_LOG_DEFAULT, "[SSChatMix] InitializeAsWriter: already attached");
+        if (logFile) { fprintf(logFile, "Already attached, returning false\n"); fclose(logFile); }
         return false;
     }
     
     fprintf(stderr, "[SSChatMix] InitializeAsWriter: creating shared memory '%s' size=%zu\n", mName, mMemorySize);
     os_log(OS_LOG_DEFAULT, "[SSChatMix] InitializeAsWriter: creating shared memory '%{public}s' size=%zu", mName, mMemorySize);
+    if (logFile) fprintf(logFile, "Unlinking old shm: %s\n", mName);
     
     // Use POSIX shared memory (more compatible with sandboxed environments)
     // Unlink any existing shared memory first
     shm_unlink(mName);
+    if (logFile) fprintf(logFile, "Calling shm_open with O_CREAT|O_RDWR mode 0666\n");
     
-    // Create new shared memory object
-    int fd = shm_open(mName, O_CREAT | O_RDWR, 0600);
+    // Create new shared memory object with permissive mode (0666) so app can access it
+    // Plugin runs as root, app runs as user - need world-readable/writable permissions
+    int fd = shm_open(mName, O_CREAT | O_RDWR, 0666);
+    if (logFile) fprintf(logFile, "shm_open returned fd=%d (errno=%d if negative)\n", fd, errno);
+    
     if (fd < 0) {
         fprintf(stderr, "[SSChatMix] InitializeAsWriter: shm_open failed: %d (%s)\n", errno, strerror(errno));
         os_log_error(OS_LOG_DEFAULT, "[SSChatMix] InitializeAsWriter: shm_open failed: %d (%{public}s)", errno, strerror(errno));
+        if (logFile) { fprintf(logFile, "shm_open FAILED, returning false\n"); fclose(logFile); }
         return false;
     }
     
     // Set size
+    if (logFile) fprintf(logFile, "Calling ftruncate(%d, %zu)\n", fd, mMemorySize);
     if (ftruncate(fd, mMemorySize) != 0) {
+        if (logFile) fprintf(logFile, "ftruncate FAILED errno=%d\n", errno);
         close(fd);
         shm_unlink(mName);
+        if (logFile) { fprintf(logFile, "Returning false\n"); fclose(logFile); }
         return false;
     }
+    if (logFile) fprintf(logFile, "ftruncate succeeded\n");
     
     // Map memory
+    if (logFile) fprintf(logFile, "Calling mmap for %zu bytes\n", mMemorySize);
     mMemoryAddress = mmap(NULL, mMemorySize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     close(fd);  // Can close fd after mmap
     
+    if (logFile) fprintf(logFile, "mmap returned %p\n", mMemoryAddress);
+    
     if (mMemoryAddress == MAP_FAILED) {
+        fprintf(stderr, "[SSChatMix] InitializeAsWriter: mmap failed\n");
         shm_unlink(mName);
         mMemoryAddress = nullptr;
+        if (logFile) { fprintf(logFile, "mmap FAILED, returning false\n"); fclose(logFile); }
         return false;
     }
     
     // Set up pointers
     mRingBuffer = reinterpret_cast<SSChatMix_SharedRingBuffer*>(mMemoryAddress);
     mAudioData = reinterpret_cast<Float32*>(static_cast<char*>(mMemoryAddress) + sizeof(SSChatMix_SharedRingBuffer));
+    
+    if (logFile) fprintf(logFile, "Initializing ring buffer metadata\n");
     
     // Initialize ring buffer metadata
     mRingBuffer->capacityFrames = mCapacityFrames;
@@ -95,12 +116,17 @@ bool SSChatMix_SharedMemory::InitializeAsWriter() {
     
     // Zero out audio data
     memset(mAudioData, 0, mCapacityFrames * mBytesPerFrame);
+    if (logFile) fprintf(logFile, "Zeroed audio data\n");
     
     mIsWriter = true;
     mIsAttached = true;
     
     fprintf(stderr, "[SSChatMix] InitializeAsWriter: SUCCESS - shared memory '%s' created\n", mName);
     os_log(OS_LOG_DEFAULT, "[SSChatMix] InitializeAsWriter: SUCCESS - shared memory '%{public}s' created", mName);
+    if (logFile) {
+        fprintf(logFile, "=== InitializeAsWriter SUCCESS for %s ===\n", mName);
+        fclose(logFile);
+    }
     return true;
 }
 

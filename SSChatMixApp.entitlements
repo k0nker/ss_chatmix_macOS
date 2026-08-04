@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Disable app sandbox for audio/HID access -->
-    <key>com.apple.security.app-sandbox</key>
-    <false/>
+    <!-- Allow get-task-allow for debugging -->
+    <key>com.apple.security.get-task-allow</key>
+    <true/>
     
     <!-- Network access for Sparkle updates -->
     <key>com.apple.security.network.client</key>
@@ -12,10 +12,6 @@
     
     <!-- USB device access for HID controller -->
     <key>com.apple.security.device.usb</key>
-    <true/>
-    
-    <!-- Audio input access -->
-    <key>com.apple.security.device.audio-input</key>
     <true/>
     
     <!-- Allow unsigned executable memory (for CoreAudio) -->

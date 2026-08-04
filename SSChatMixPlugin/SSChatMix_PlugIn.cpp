@@ -47,44 +47,61 @@ void SSChatMix_PlugIn::SetHost(AudioServerPlugInHostRef inHost) {
 SSChatMix_PlugIn& SSChatMix_PlugIn::GetInstance() {
     FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
     if (log) {
-        fprintf(log, "GetInstance() called\n");
+        fprintf(log, "GetInstance() called - sInstance=%p\n", sInstance);
+        fflush(log);
         fclose(log);
     }
-    pthread_once(&sStaticInitializer, []() {
-        FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
-        if (log) {
-            fprintf(log, "pthread_once block executing - creating SSChatMix_PlugIn\n");
-            fclose(log);
-        }
-        sInstance = new SSChatMix_PlugIn;
+    fprintf(stderr, "GetInstance: sInstance=%p\n", sInstance);
+    
+    if (!sInstance) {
         log = fopen("/tmp/sschatmix_plugin.log", "a");
         if (log) {
-            fprintf(log, "SSChatMix_PlugIn created, calling Activate()\n");
+            fprintf(log, "sInstance is NULL, calling pthread_once\n");
             fclose(log);
         }
-        sInstance->Activate();
-        
-        // Initialize timing
-        struct mach_timebase_info timeBaseInfo;
-        mach_timebase_info(&timeBaseInfo);
-        Float64 hostClockFrequency = (Float64)timeBaseInfo.denom / (Float64)timeBaseInfo.numer;
-        hostClockFrequency *= 1000000000.0;
-        sInstance->mGameDevice.SetHostTicksPerFrame(hostClockFrequency / kSSChatMix_SampleRate);
-        sInstance->mChatDevice.SetHostTicksPerFrame(hostClockFrequency / kSSChatMix_SampleRate);
-        
-        // Initialize anchor times
-        UInt64 anchorHostTime = mach_absolute_time();
-        sInstance->mGameDevice.SetAnchorTime(anchorHostTime, 0.0);
-        sInstance->mChatDevice.SetAnchorTime(anchorHostTime, 0.0);
-        
+        pthread_once(&sStaticInitializer, []() {
+            FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
+            if (log) {
+                fprintf(log, "pthread_once block executing - creating SSChatMix_PlugIn\n");
+                fflush(log);
+            }
+            sInstance = new SSChatMix_PlugIn;
+            log = fopen("/tmp/sschatmix_plugin.log", "a");
+            if (log) {
+                fprintf(log, "SSChatMix_PlugIn created, calling Activate()\n");
+                fflush(log);
+            }
+            sInstance->Activate();
+            
+            // Initialize timing
+            struct mach_timebase_info timeBaseInfo;
+            mach_timebase_info(&timeBaseInfo);
+            Float64 hostClockFrequency = (Float64)timeBaseInfo.denom / (Float64)timeBaseInfo.numer;
+            hostClockFrequency *= 1000000000.0;
+            sInstance->mGameDevice.SetHostTicksPerFrame(hostClockFrequency / kSSChatMix_SampleRate);
+            sInstance->mChatDevice.SetHostTicksPerFrame(hostClockFrequency / kSSChatMix_SampleRate);
+            
+            // Initialize anchor times
+            UInt64 anchorHostTime = mach_absolute_time();
+            sInstance->mGameDevice.SetAnchorTime(anchorHostTime, 0.0);
+            sInstance->mChatDevice.SetAnchorTime(anchorHostTime, 0.0);
+            
+            log = fopen("/tmp/sschatmix_plugin.log", "a");
+            if (log) {
+                fprintf(log, "Plugin initialization complete\n");
+                fflush(log);
+                fclose(log);
+            }
+            os_log(OS_LOG_DEFAULT, "SSChatMix_PlugIn::GetInstance: hostTicksPerFrame=%f",
+                   sInstance->mGameDevice.GetHostTicksPerFrame());
+        });
+    } else {
         log = fopen("/tmp/sschatmix_plugin.log", "a");
         if (log) {
-            fprintf(log, "Plugin initialization complete\n");
+            fprintf(log, "sInstance already initialized at %p\n", sInstance);
             fclose(log);
         }
-        os_log(OS_LOG_DEFAULT, "SSChatMix_PlugIn::GetInstance: hostTicksPerFrame=%f",
-               sInstance->mGameDevice.GetHostTicksPerFrame());
-    });
+    }
     log = fopen("/tmp/sschatmix_plugin.log", "a");
     if (log) {
         fprintf(log, "GetInstance() returning\n");

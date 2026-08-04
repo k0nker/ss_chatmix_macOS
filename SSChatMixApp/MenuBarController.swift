@@ -43,6 +43,9 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     var settingsWindow: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Check if HAL plugin is installed with correct permissions
+        checkPluginInstallation()
+        
         // Set app icon for Dock, notifications, etc.
         NSApplication.shared.applicationIconImage = createAppIcon()
         
@@ -246,8 +249,9 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             // Try to find SSChatMix devices
             guard let gameDevice = try audioController.findSSChatMixGameDevice(),
                   let chatDevice = try audioController.findSSChatMixChatDevice() else {
-                print("SSChatMix devices not found - user must configure manually")
-                statusMessage = "Configure devices in Settings"
+                print("SSChatMix devices not found - showing error alert")
+                statusMessage = "SSChatMix Devices Not Found"
+                showMissingDevicesAlert()
                 return
             }
             
@@ -303,6 +307,102 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
     
+    /// Show alert when SSChatMix virtual devices are not found
+    private func showMissingDevicesAlert() {
+        let alert = NSAlert()
+        alert.messageText = "SSChatMix Devices Not Found"
+        alert.informativeText = """
+        The SSChatMix virtual audio devices (Game and Chat) are required to run SSChatMix.
+        
+        These devices are created by the SSChatMixPlugin.driver audio plugin.
+        
+        To fix this:
+        1. Download SSChatMixPlugin-1.0.0.pkg from the GitHub releases page
+        2. Double-click the .pkg file to install the audio plugin
+        3. Or run: sudo installer -pkg SSChatMixPlugin-1.0.0.pkg -target /
+        4. Restart SSChatMix after installation
+        
+        You can verify the devices are installed by running:
+        system_profiler SPAudioDataType | grep SSChatMix
+        """
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Open GitHub Releases")
+        
+        let response = alert.runModal()
+        if response == .alertSecondButtonReturn {
+            if let url = URL(string: "https://github.com/k0nker/ss_chatmix_macOS/releases") {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    }
+    
+    /// Show alert when HAL plugin is not installed
+    private func showPluginNotInstalledAlert() {
+        let alert = NSAlert()
+        alert.messageText = "SSChatMix Plugin Not Installed"
+        alert.informativeText = """
+        The SSChatMixPlugin.driver is required for SSChatMix to work.
+        
+        The plugin provides the virtual audio devices and handles the audio routing through shared memory.
+        
+        To install:
+        1. Download SSChatMixPlugin-1.0.0.pkg from the GitHub releases
+        2. Run: sudo installer -pkg SSChatMixPlugin-1.0.0.pkg -target /
+        3. Restart SSChatMix
+        
+        For development from Xcode, use the install script:
+        ./install_plugin.sh
+        
+        Then restart coreaudiod:
+        sudo killall coreaudiod
+        
+        Verify installation:
+        system_profiler SPAudioDataType | grep SSChatMix
+        """
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Open GitHub Releases")
+        
+        let response = alert.runModal()
+        if response == .alertSecondButtonReturn {
+            if let url = URL(string: "https://github.com/k0nker/ss_chatmix_macOS/releases") {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    }
+    
+    /// Check if HAL plugin is installed with correct ownership
+    private func checkPluginInstallation() {
+        let pluginPath = "/Library/Audio/Plug-Ins/HAL/SSChatMixPlugin.driver"
+        let fileManager = FileManager.default
+        
+        guard fileManager.fileExists(atPath: pluginPath) else {
+            print("⚠️  HAL plugin not found at: \(pluginPath)")
+            statusMessage = "Plugin not installed"
+            // Alert will be shown when we try to detect devices
+            return
+        }
+        
+        // Check ownership - should be root:wheel
+        do {
+            let attrs = try fileManager.attributesOfItem(atPath: pluginPath)
+            if let uid = attrs[.ownerAccountID] as? NSNumber {
+                let ownerUID = uid.int32Value
+                if ownerUID != 0 {  // 0 = root
+                    print("⚠️  Plugin owned by UID \(ownerUID), should be 0 (root)")
+                    print("    Fix with: sudo chown -R root:wheel \(pluginPath)")
+                    statusMessage = "Plugin has wrong ownership"
+                    return
+                }
+            }
+        } catch {
+            print("⚠️  Could not check plugin attributes: \(error)")
+        }
+        
+        print("✅ HAL plugin verified at: \(pluginPath)")
+    }
+    
     // MARK: - Menu Bar
     
     func updateMenu() {
@@ -352,8 +452,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         
         // Device selection submenus
         menu.addItem(buildChatMixDeviceMenu())
-        menu.addItem(buildGameDeviceMenu())
-        menu.addItem(buildChatDeviceMenu())
+        // Game and Chat devices are locked to SSChatMix virtual devices
         menu.addItem(buildOutputDeviceMenu())
         
         menu.addItem(NSMenuItem.separator())
@@ -533,15 +632,17 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             // Find audio devices (SSChatMix virtual devices)
             guard let foundGameDeviceID = try audioController.findDevice(byUID: config.audioDevices.game.uid) else {
                 statusMessage = "Game device not found"
-                print("Game device not found: \(config.audioDevices.game.uid)")
+                print("❌ Game device not found: \(config.audioDevices.game.uid)")
                 print("   Make sure SSChatMixPlugin is installed at /Library/Audio/Plug-Ins/HAL/")
+                showPluginNotInstalledAlert()
                 return
             }
             
             guard let foundChatDeviceID = try audioController.findDevice(byUID: config.audioDevices.chat.uid) else {
                 statusMessage = "Chat device not found"
-                print("Chat device not found: \(config.audioDevices.chat.uid)")
+                print("❌ Chat device not found: \(config.audioDevices.chat.uid)")
                 print("   Make sure SSChatMixPlugin is installed at /Library/Audio/Plug-Ins/HAL/")
+                showPluginNotInstalledAlert()
                 return
             }
             
@@ -937,7 +1038,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         alert.informativeText = """
         Native macOS controller for SteelSeries Arctis Nova ChatMix dial.
         
-        Version 1.0.0
+        Version: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
         
         The controller runs inside this app - no external processes needed.
         """
