@@ -11,6 +11,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 ### Removed
 
+## [1.1] - 2026-08-04
+
+### Added
+- New virtual audio devices specific to SSChatMix: `SSChatMix Game` and `SSChatMix Chat`
+
+### Changed
+- App now uses the new virtual devices exclusively for the inputs
+- Delay reduced
+- Moved to using shared memory to relay audio. This removes the microphone notice.
+
+### Notes
+- Audio will stutter on app startup as well as if you open an app that requires microphone access. This is a macOS limitation as CoreAudio is torn down and rebuilt when this happens. Until drivers can mix their own audio there isn't a way I have found around this.
+
 ## [1.0.3] - 2026-08-03
 
 ### Fixed
