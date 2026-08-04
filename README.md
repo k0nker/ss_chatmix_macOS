@@ -10,37 +10,22 @@ SteelSeries SONAR doesn't work on macOS, which means the ChatMix dial on newer A
 
 ## How It Works
 
-### Using SSChatMix Native Devices (Recommended - Built-in!)
+SSChatMix includes **built-in virtual audio devices** - no third-party tools required!
 
-SSChatMix now includes **built-in virtual audio devices** (no BlackHole required!):
-1. **SSChatMix Game** - Route game audio here
-2. **SSChatMix Chat** - Route chat/voice apps here
-3. The HAL plugin handles audio routing to your output device
-4. Select them in Settings and you're ready!
+1. **SSChatMix Game** and **SSChatMix Chat** - Two virtual output devices created by the HAL plugin
+2. **Route your audio** - Direct game audio to SSChatMix Game, chat/voice apps to SSChatMix Chat
+3. **Shared memory transfer** - Plugin writes audio data to POSIX shared memory (~170ms ring buffers)
+4. **Hardware-accelerated mixing** - App uses vDSP (Accelerate framework) to mix and scale audio
+5. **Turn the dial** - Game/chat balance adjusts in real-time with ultra-low latency
 
 **Benefits:**
 - ✅ **No microphone permissions required!**
-- ✅ **No audio cutouts from Teams/etc**
+- ✅ **No audio cutouts from Teams/Zoom/etc**
 - ✅ **Plugin-level audio routing** (system-level, not app-level)
+- ✅ **Low latency** (~42ms IO period, ~170ms max buffer)
+- ✅ **Zero CPU mixing** with hardware acceleration
 
-### Using BlackHole (Legacy Method)
-
-1. **Two virtual audio devices** - You need two separate virtual outputs (like BlackHole 2ch and BlackHole 16ch)
-2. **Route your audio** - Direct game audio to one virtual device, chat/voice apps to the other
-3. **Real-time mixing** - The app reads from both virtual devices, applies your dial position, mixes them together, and outputs to your headphones
-4. **Turn the dial** - Game/chat balance adjusts in real-time
-
-**Performance:** < 0.5% CPU, zero-latency audio mixing with CoreAudio
-
-### Recommended: BlackHole Virtual Audio Driver (Optional)
-
-**NEW**: SSChatMix now includes built-in virtual devices! BlackHole is optional if you prefer to use it instead.
-
-Install [BlackHole](https://github.com/ExistentialAudio/BlackHole) for additional virtual audio devices:
-
-```bash
-brew install blackhole-2ch blackhole-16ch
-```
+**Performance:** < 0.5% CPU, hardware-accelerated audio mixing
 
 ## Features
 
@@ -56,34 +41,28 @@ brew install blackhole-2ch blackhole-16ch
 
 - macOS 15.0+
 - SteelSeries Arctis Nova with ChatMix dial (Nova 7, Nova Pro, etc.)
-- Two virtual audio devices ([BlackHole](https://github.com/ExistentialAudio/BlackHole) recommended)
 
 ## Installation
 
 ### Download Release
 
-1. Download the latest `SSChatMix-X.X.X.dmg` from [Releases](https://github.com/k0nker/ss_chatmix_macOS/releases)
-2. Open the DMG
-3. Drag **SSChatMix** to the **Applications** folder
-4. **Install the HAL Plugin** (for SSChatMix virtual devices):
-   ```bash
-   sudo cp -R SSChatMixPlugin.driver /Library/Audio/Plug-Ins/HAL/
-   sudo killall coreaudiod
-   ```
-5. Verify devices are installed:
+1. Download the latest release from [Releases](https://github.com/k0nker/ss_chatmix_macOS/releases)
+2. **Install the HAL Plugin first:**
+   - Open `SSChatMixPlugin-X.X.pkg` and follow the installer
+   - This creates the SSChatMix Game and SSChatMix Chat virtual devices
+3. **Install the app:**
+   - Open `SSChatMix-X.X.dmg`
+   - Drag **SSChatMix** to the **Applications** folder
+4. **Verify installation:**
    ```bash
    system_profiler SPAudioDataType | grep SSChatMix
    ```
    You should see "SSChatMix Game" and "SSChatMix Chat"
-6. Launch SSChatMix from Applications
+5. Launch SSChatMix from Applications
 
 On first launch, you may need to allow the app in **System Settings > Privacy & Security**.
 
-### Install BlackHole (if you haven't already)
-
-```bash
-brew install blackhole-2ch blackhole-16ch
-```
+💡 **Important:** Always install the plugin package before the app to ensure version compatibility.
 
 ## Usage
 
@@ -93,16 +72,16 @@ brew install blackhole-2ch blackhole-16ch
 2. **Click the menu bar icon** (🎧) and select **Settings...**
 3. **Configure devices:**
    - **ChatMix Dial**: Select your SteelSeries device
-   - **Game Audio**: Select "SSChatMix Game" (or BlackHole 16ch if using BlackHole)
-   - **Chat Audio**: Select "SSChatMix Chat" (or BlackHole 2ch if using BlackHole)
+   - **Game Audio**: Select "SSChatMix Game"
+   - **Chat Audio**: Select "SSChatMix Chat"
    - **Output**: Select your physical headphones/speakers
 4. **Click "Start"** (or the controller starts automatically)
 
 ### Route Your Applications
 
-- Set **game apps** to output to **SSChatMix Game** (or your Game Audio device)
-- Set **chat apps** (Discord, Zoom, etc.) to output to **SSChatMix Chat** (or your Chat Audio device)
-- Optional: Set one of the virtual channels as the default sound output to have all audio route to that channel.
+- Set **game apps** to output to **SSChatMix Game**
+- Set **chat apps** (Discord, Zoom, etc.) to output to **SSChatMix Chat**
+- Optional: Set one of the virtual devices as the default sound output to have all audio route to that channel
 - **Turn the dial** - volumes adjust in real-time!
 
 💡 **Tip:** Use macOS Audio MIDI Setup or per-app audio settings to route audio to virtual devices.
@@ -128,32 +107,34 @@ The Settings window shows:
 
 ### Architecture
 
-**Current Status**: Loopback devices implemented, Swift app routing in progress.
-
-- **HAL Audio Plugin** - Virtual devices with loopback architecture (Background Music pattern)
-  - Each device has **input stream** + **output stream**
-  - Apps write to output → Stored in ring buffer
-  - User-space app reads from input → Fetches from ring buffer
-  - ✅ Plugin complete and working (tested)
+- **HAL Audio Plugin (C++)** - CoreAudio driver creating virtual output devices
+  - Two devices: **SSChatMix Game** and **SSChatMix Chat**
+  - Each device writes incoming audio to POSIX shared memory (`/ssc.game`, `/ssc.chat`)
+  - Ring buffer: 8192 frames (~170ms capacity at 48kHz)
+  - IO period: 2048 frames (~42ms latency)
+  - Bundle ID: `com.k0nker.SSChatMixPlugin`
+  - Location: `/Library/Audio/Plug-Ins/HAL/SSChatMixPlugin.driver`
   
-- **Menu bar app** - SwiftUI interface with NSStatusItem
+- **Menu bar app (Swift)** - SwiftUI interface with NSStatusItem
+  - Reads audio from shared memory ring buffers
+  - Hardware-accelerated mixing with vDSP (Accelerate framework)
   - Background HID thread for ChatMix dial input
-  - Volume control via HID dial
-  - ⚠️ TODO: Audio routing implementation (read from loopback devices, mix, output to physical device)
+  - Volume control mapped from dial position (0-100 range)
+  - Sparkle auto-updates with EdDSA signed releases
   
-- **Sparkle auto-updates** - EdDSA signed releases for security
+### Shared Memory Architecture
 
-### How It Works (Target Architecture)
+1. **Apps output to SSChatMix virtual devices** → CoreAudio routes to HAL plugin
+2. **HAL plugin writes to shared memory** → POSIX `shm_open()` with atomic ring buffers
+3. **Swift app reads from shared memory** → Lock-free atomic read/write positions
+4. **vDSP hardware mixing** → `vDSP_vsmul`, `vDSP_vsma`, `vDSP_vclip` for zero-CPU mixing
+5. **Output to physical device** → Scaled, mixed, clipped audio to headphones/speakers
 
-1. **Apps output to SSChatMix virtual devices** (Game or Chat) → Writes to output stream
-2. **HAL plugin stores audio in ring buffers** (loopback pattern, no deadlock)
-3. **Swift app reads from virtual device input streams** (loopback from ring buffers)
-4. **Swift app applies volume control** (from ChatMix dial position)
-5. **Swift app mixes Game + Chat audio** (with volume scaling)
-6. **Swift app writes to user-selected physical output device** (headphones/speakers)
-7. **No microphone permissions needed** - plugin provides loopback, not capture
-
-**Current Implementation**: Steps 1-2 complete (plugin loopback working). Steps 3-6 need Swift implementation.
+**Benefits:**
+- No microphone permissions (not using audio capture API)
+- No loopback deadlocks (shared memory is unidirectional)
+- Ultra-low CPU usage (hardware acceleration)
+- System-level routing (works with all apps)
 
 ### HID Device Reading
 
@@ -165,9 +146,9 @@ The Settings window shows:
 ### Volume Control
 
 - Dial position mapped to 0-100 volume range
-- Volume set directly on SSChatMix virtual devices via CoreAudio API
-- HAL plugin reads volume controls and applies during mixing
-- 50ms debouncing prevents dial jitter
+- Live volume visualization in Settings window
+- Hardware mixing applies volume scaling with vDSP
+- Volume persists across app restarts
 
 ## Troubleshooting
 
@@ -197,8 +178,8 @@ The Settings window shows:
 - Try restarting the controller from the menu
 
 ### No audio output
-- If using SSChatMix devices: ensure plugin is installed and devices are visible
-- If using BlackHole: verify it's installed with `brew list blackhole-2ch blackhole-16ch`
+- Ensure the HAL plugin is installed (see Installation section)
+- Verify SSChatMix devices are visible in Audio MIDI Setup
 - Check that apps are outputting to the virtual devices (Game/Chat Audio)
 - Ensure the Output device is selected correctly in Settings
 
@@ -216,6 +197,40 @@ The Settings window shows:
 - Check Settings > Updates > "Automatically check for updates" is enabled
 - Manually check with **Check for Updates...** from the menu
 - Ensure you have an internet connection
+
+### Plugin version mismatch
+- The app checks plugin version on startup
+- If versions don't match, you'll see an alert with download instructions
+- Always install the plugin package (.pkg) before the app (.dmg)
+- Download both from the same release on GitHub
+
+---
+
+## Legacy - Releases Prior to 1.1
+
+**Note:** Version 1.1 and later include built-in virtual devices. The information below applies to older releases that required BlackHole.
+
+### Using BlackHole (Legacy Method - Pre-1.1)
+
+Earlier versions of SSChatMix required [BlackHole](https://github.com/ExistentialAudio/BlackHole) for virtual audio devices:
+
+1. Install BlackHole:
+   ```bash
+   brew install blackhole-2ch blackhole-16ch
+   ```
+2. Route game audio to BlackHole 16ch
+3. Route chat audio to BlackHole 2ch
+4. SSChatMix would capture from these devices and mix
+
+**Why we moved away from BlackHole:**
+- Required microphone permissions
+- Audio cutouts when Teams/Zoom/etc. opened
+- App-level capture instead of system-level routing
+- Additional dependency to install and maintain
+
+If you're still using a pre-1.1 release, we recommend updating to the latest version for the improved architecture.
+
+---
 
 ## License
 
