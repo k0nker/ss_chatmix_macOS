@@ -20,10 +20,10 @@ SSChatMix includes **built-in virtual audio devices** - no third-party tools req
 
 **Benefits:**
 - ✅ **No microphone permissions required!**
-- ✅ **No audio cutouts from Teams/Zoom/etc**
-- ✅ **Plugin-level audio routing** (system-level, not app-level)
+- ✅ **Shared memory architecture** (no audio capture API)
 - ✅ **Low latency** (~42ms IO period, ~170ms max buffer)
 - ✅ **Zero CPU mixing** with hardware acceleration
+- ⚠️  **Note:** Audio may stutter when apps that require microphone access are opened (macOS CoreAudio limitation)
 
 **Performance:** < 0.5% CPU, hardware-accelerated audio mixing
 
@@ -134,7 +134,7 @@ The Settings window shows:
 - No microphone permissions (not using audio capture API)
 - No loopback deadlocks (shared memory is unidirectional)
 - Ultra-low CPU usage (hardware acceleration)
-- System-level routing (works with all apps)
+- Works with all apps (virtual devices available system-wide)
 
 ### HID Device Reading
 
@@ -188,6 +188,13 @@ The Settings window shows:
 - The app uses throttled updates and background threading to prevent audio issues
 - If crackling persists, try restarting the app
 
+### Audio stuttering at startup or when opening certain apps
+- **Expected behavior:** Audio will briefly stutter when apps requiring microphone access are opened (Teams, Zoom, Discord, etc.)
+- **Cause:** macOS CoreAudio is torn down and rebuilt when microphone permissions change
+- **This is a macOS limitation,** not a bug in SSChatMix
+- The audio will resume normally after a few seconds
+- No workaround is currently possible at the plugin level
+
 ### App won't start
 - Allow the app if it's blocked in **System Settings > Privacy & Security**
 - Try moving the app to Applications and launching from there
@@ -224,9 +231,9 @@ Earlier versions of SSChatMix required [BlackHole](https://github.com/Existentia
 
 **Why we moved away from BlackHole:**
 - Required microphone permissions
-- Audio cutouts when Teams/Zoom/etc. opened
-- App-level capture instead of system-level routing
-- Additional dependency to install and maintain
+- Relied on audio capture API instead of shared memory
+- Additional external dependency to install and maintain
+- Less control over latency and buffer sizes
 
 If you're still using a pre-1.1 release, we recommend updating to the latest version for the improved architecture.
 
