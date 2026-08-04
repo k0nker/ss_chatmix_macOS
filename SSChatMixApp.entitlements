@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Allow get-task-allow for debugging -->
-    <key>com.apple.security.get-task-allow</key>
-    <true/>
-    
     <!-- Network access for Sparkle updates -->
     <key>com.apple.security.network.client</key>
     <true/>
