@@ -521,7 +521,7 @@ OSStatus SSChatMix_Device::GetPropertyData(AudioObjectID inObjectID,
             break;
             
         case kAudioDevicePropertyZeroTimeStampPeriod:
-            *reinterpret_cast<UInt32*>(outData) = kSSChatMix_RingBufferFrames;
+            *reinterpret_cast<UInt32*>(outData) = kSSChatMix_IOBufferPeriod;
             outDataSize = sizeof(UInt32);
             break;
             
