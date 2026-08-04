@@ -7,6 +7,33 @@
         <link>https://github.com/k0nker/ss_chatmix_macOS</link>
         <description>Most recent updates to SSChatMix</description>
         <language>en</language>
+
+        <item>
+            <title>Version 1.1</title>
+            <link>https://github.com/k0nker/ss_chatmix_macOS/releases/tag/v1.1</link>
+            <sparkle:version>1.1</sparkle:version>
+            <sparkle:shortVersionString>1.1</sparkle:shortVersionString>
+            <description><![CDATA[
+        <h2>What's New in v1.1</h2>
+        <h3>Added</h3>
+        <ul>
+            <li>New virtual audio devices specific to SSChatMix: `SSChatMix Game` and `SSChatMix Chat`</li>
+        </ul>
+        <h3>Changed</h3>
+        <ul>
+            <li>App now uses the new virtual devices exclusively for the inputs</li>
+            <li>Delay reduced</li>
+            <li>Moved to using shared memory to relay audio. This removes the microphone notice.</li>
+        </ul>
+        <h3>Notes</h3>
+        <ul>
+            <li>Audio will stutter on app startup as well as if you open an app that requires microphone access. This is a macOS limitation as CoreAudio is torn down and rebuilt when this happens. Until drivers can mix their own audio there isn't a way I have found around this.</li>
+        </ul>
+    ]]>            </description>
+            <pubDate>Tue, 04 Aug 2026 17:16:52 +0000</pubDate>
+            <enclosure url="https://github.com/k0nker/ss_chatmix_macOS/releases/download/v1.1/SSChatMix-1.1.dmg" sparkle:version="1.1" sparkle:shortVersionString="1.1" sparkle:edSignature="1kW4TT2cZsmOeNB+boLygQ/Gl9CKTgwP3HpEIRB5gLX8QEIZlxTfHDMJfb9UONUhuuOUeHp0FYv0fj9BOWfjAQ==" length="2340683" type="application/octet-stream" />
+        </item>
+        
         <item>
             <title>Version 1.0.3</title>
             <link>https://github.com/k0nker/ss_chatmix_macOS/releases/tag/v1.0.3</link>
