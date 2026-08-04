@@ -159,7 +159,7 @@ The Settings window shows:
   ```
 - Restart the audio service:
   ```bash
-  sudo killall coreaudiod
+  sudo killall -9 coreaudiod audioaccessoryd audiomxd AirPlayXPCHelper
   ```
 - Check if devices registered:
   ```bash
