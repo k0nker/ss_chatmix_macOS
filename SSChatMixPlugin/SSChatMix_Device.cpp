@@ -193,6 +193,7 @@ bool SSChatMix_Device::HasProperty(AudioObjectID inObjectID,
         case kAudioDevicePropertyIsHidden:
         case kAudioDevicePropertyZeroTimeStampPeriod:
         case kAudioDevicePropertyPreferredChannelsForStereo:
+        case kAudioDevicePropertyIcon:
             theAnswer = true;
             break;
             
@@ -241,6 +242,7 @@ bool SSChatMix_Device::IsPropertySettable(AudioObjectID inObjectID,
         case kAudioDevicePropertyIsHidden:
         case kAudioDevicePropertyZeroTimeStampPeriod:
         case kAudioDevicePropertyPreferredChannelsForStereo:
+        case kAudioDevicePropertyIcon:
             theAnswer = false;
             break;
             
@@ -338,6 +340,10 @@ UInt32 SSChatMix_Device::GetPropertyDataSize(AudioObjectID inObjectID,
             
         case kAudioDevicePropertyPreferredChannelsForStereo:
             theAnswer = 2 * sizeof(UInt32);
+            break;
+            
+        case kAudioDevicePropertyIcon:
+            theAnswer = sizeof(CFURLRef);
             break;
             
         default:
@@ -523,6 +529,25 @@ OSStatus SSChatMix_Device::GetPropertyData(AudioObjectID inObjectID,
             reinterpret_cast<UInt32*>(outData)[0] = 1;
             reinterpret_cast<UInt32*>(outData)[1] = 2;
             outDataSize = 2 * sizeof(UInt32);
+            break;
+            
+        case kAudioDevicePropertyIcon:
+            {
+                // Get the plugin bundle and construct URL to the icon file
+                CFBundleRef bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.k0nker.SSChatMixPlugin"));
+                if (bundle != NULL) {
+                    CFURLRef iconURL = CFBundleCopyResourceURL(bundle, CFSTR("SSChatMixIcon"), CFSTR("icns"), NULL);
+                    if (iconURL != NULL) {
+                        *reinterpret_cast<CFURLRef*>(outData) = iconURL;
+                        outDataSize = sizeof(CFURLRef);
+                        // Note: caller is responsible for releasing the URL
+                    } else {
+                        result = kAudioHardwareUnknownPropertyError;
+                    }
+                } else {
+                    result = kAudioHardwareUnknownPropertyError;
+                }
+            }
             break;
             
         default:

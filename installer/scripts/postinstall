@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# Post-install script for SSChatMixPlugin.driver
+# This script runs after the package is installed
+# Sets correct ownership and permissions for the HAL plugin
+#
+
+PLUGIN_PATH="/Library/Audio/Plug-Ins/HAL/SSChatMixPlugin.driver"
+
+echo "SSChatMix Post-Install: Starting..." >> /tmp/sschatmix-install.log
+
+if [ ! -d "$PLUGIN_PATH" ]; then
+    echo "ERROR: Plugin not found at $PLUGIN_PATH" >> /tmp/sschatmix-install.log
+    exit 1
+fi
+
+# Set ownership to root:wheel (required for CoreAudio to load the plugin)
+echo "Setting ownership to root:wheel..." >> /tmp/sschatmix-install.log
+chown -R root:wheel "$PLUGIN_PATH" 2>> /tmp/sschatmix-install.log
+
+# Set permissions (755 for directories/executables, 644 for other files)
+echo "Setting permissions..." >> /tmp/sschatmix-install.log
+chmod -R 755 "$PLUGIN_PATH" 2>> /tmp/sschatmix-install.log
+find "$PLUGIN_PATH" -type f ! -perm +111 -exec chmod 644 {} \; 2>> /tmp/sschatmix-install.log
+
+# Remove macOS metadata files
+echo "Cleaning up metadata files..." >> /tmp/sschatmix-install.log
+find "$PLUGIN_PATH" -name ".DS_Store" -delete 2>> /tmp/sschatmix-install.log
+
+# Restart CoreAudio to load the plugin
+echo "Restarting CoreAudio..." >> /tmp/sschatmix-install.log
+killall -9 coreaudiod audioaccessoryd audiomxd AirPlayXPCHelper 2>> /tmp/sschatmix-install.log
+
+# Wait for devices to appear
+echo "Waiting for devices to initialize..." >> /tmp/sschatmix-install.log
+sleep 15
+
+# Verify devices appeared
+if system_profiler SPAudioDataType | grep -q "SSChatMix Game"; then
+    echo "SUCCESS: SSChatMix devices initialized" >> /tmp/sschatmix-install.log
+else
+    echo "WARNING: Devices not yet visible (may need manual CoreAudio restart)" >> /tmp/sschatmix-install.log
+fi
+
+echo "SSChatMix Post-Install: Complete" >> /tmp/sschatmix-install.log
+exit 0

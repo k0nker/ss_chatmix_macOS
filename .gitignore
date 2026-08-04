@@ -16,13 +16,9 @@ config.json
 
 
 # Distribution & Build (sensitive/local)
-DISTRIBUTION.md
-
-
 ExportOptions.plist
 build/
 *.edSignature
-installer/
 NonRepoFiles/
 
 # Sparkle keys
@@ -31,5 +27,7 @@ NonRepoFiles/
 ~/.sparkle_rsa
 
 *.app
-
+*.pkg
+*.driver
+*.icns
 .build/

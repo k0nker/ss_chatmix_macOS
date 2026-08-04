@@ -81,7 +81,7 @@ for service in services {
             print("  Restarting \(service)...")
             let killProcess = Process()
             killProcess.launchPath = "/usr/bin/killall"
-            killProcess.arguments = [service]
+            killProcess.arguments = ["-9", service]
             try? killProcess.run()
         }
     } catch {
@@ -90,7 +90,8 @@ for service in services {
 }
 
 // Wait for services to restart
-sleep(2)
+print("Waiting for audio services to restart...")
+sleep(15)
 
 print("")
 print("\(GREEN)✓ Uninstall complete!\(NC)")
