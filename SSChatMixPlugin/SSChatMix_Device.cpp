@@ -15,38 +15,93 @@ SSChatMix_Device::SSChatMix_Device(AudioObjectID inObjectID,
                                    const char* inDeviceName,
                                    const char* inDeviceUID,
                                    const char* inModelUID,
-                                   AudioObjectID inInputStreamID,
                                    AudioObjectID inOutputStreamID,
                                    AudioObjectID inVolumeControlID)
 :
     SSChatMix_Object(inObjectID, kAudioDeviceClassID, kAudioObjectClassID, kAudioObjectPlugInObject),
     mDeviceName(inDeviceName),
     mDeviceUID(inDeviceUID),
-    mInputStream(inInputStreamID, inObjectID, true, kSSChatMix_SampleRate),  // true = input stream
     mOutputStream(inOutputStreamID, inObjectID, false, kSSChatMix_SampleRate),  // false = output stream
     mVolumeControl(inVolumeControlID, inObjectID, kAudioObjectPropertyScopeOutput, kAudioObjectPropertyElementMain),
     mHostTicksPerFrame(0.0),
     mAnchorHostTime(0),
     mAnchorSampleTime(0.0),
     mIsIORunning(false),
-    mRingBuffer(kSSChatMix_RingBufferFrames, kSSChatMix_Channels)
+    mSharedMemory(nullptr)
 {
+    // FIRST LINE: Verify constructor runs
+    FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
+    if (log) {
+        fprintf(log, "\n=== SSChatMix_Device constructor START: %s ===\n", inDeviceUID);
+        fflush(log);
+    }
+    
+    // Create shared memory buffer with unique name based on device type
+    // Format: "/ssc.game" or "/ssc.chat" (must be ≤31 chars for macOS PSEMNAMLEN)
+    const char* shortName = (strcmp(inDeviceUID, "SSChatMixGameDevice") == 0) ? "/ssc.game" : "/ssc.chat";
+    
+    if (log) {
+        fprintf(log, "Device UID: %s -> shortName: %s\n", inDeviceUID, shortName);
+        fflush(log);
+    }
+    
+    mSharedMemory = new SSChatMix_SharedMemory(shortName, kSSChatMix_RingBufferFrames, kSSChatMix_Channels);
+    
+    if (log) {
+        fprintf(log, "Created SSChatMix_SharedMemory object at %p\n", mSharedMemory);
+        fflush(log);
+    }
+    
+    // DEBUG: Write to file to confirm this code runs
+    FILE* debugFile = fopen("/tmp/sschatmix_device_created.txt", "a");
+    if (debugFile) {
+        fprintf(debugFile, "Device constructor called: %s -> %s\n", inDeviceUID, shortName);
+        fclose(debugFile);
+    }
+    
+    if (log) {
+        fprintf(log, "About to call InitializeAsWriter()...\n");
+        fflush(log);
+    }
+    
+    // Initialize as writer (plugin side)
+    if (!mSharedMemory->InitializeAsWriter()) {
+        if (log) {
+            fprintf(log, "InitializeAsWriter() returned false\n");
+            fflush(log);
+        }
+        os_log_error(OS_LOG_DEFAULT, "Failed to initialize shared memory for device %s", inDeviceName);
+        delete mSharedMemory;
+        mSharedMemory = nullptr;
+        if (log) {
+            fprintf(log, "Deleted mSharedMemory, returning from constructor\n");
+            fclose(log);
+        }
+    } else {
+        if (log) {
+            fprintf(log, "InitializeAsWriter() succeeded! mSharedMemory is ready\n");
+            fprintf(log, "=== SSChatMix_Device constructor COMPLETE for %s ===\n\n", inDeviceUID);
+            fclose(log);
+        }
+    }
 }
 
 SSChatMix_Device::~SSChatMix_Device() {
+    if (mSharedMemory != nullptr) {
+        delete mSharedMemory;
+        mSharedMemory = nullptr;
+    }
 }
 
 // MARK: - Lifecycle
 
 void SSChatMix_Device::Activate() {
-    mInputStream.Activate();
     mOutputStream.Activate();
     mVolumeControl.Activate();
     SSChatMix_Object::Activate();
 }
 
 void SSChatMix_Device::Deactivate() {
-    mInputStream.Deactivate();
     mOutputStream.Deactivate();
     mVolumeControl.Deactivate();
     SSChatMix_Object::Deactivate();
@@ -75,15 +130,26 @@ bool SSChatMix_Device::IsIORunning() const {
 // MARK: - Audio I/O
 
 UInt32 SSChatMix_Device::WriteAudio(const Float32* data, UInt32 frameCount) {
-    return mRingBuffer.Write(data, frameCount);
+    if (mSharedMemory != nullptr) {
+        return mSharedMemory->Write(data, frameCount);
+    }
+    return 0;
 }
 
 UInt32 SSChatMix_Device::ReadAudio(Float32* data, UInt32 frameCount) {
-    return mRingBuffer.Read(data, frameCount);
+    if (mSharedMemory != nullptr) {
+        return mSharedMemory->Read(data, frameCount);
+    }
+    // Fill with silence if no shared memory
+    memset(data, 0, frameCount * kSSChatMix_Channels * sizeof(Float32));
+    return 0;
 }
 
 UInt32 SSChatMix_Device::GetAvailableFrames() const {
-    return mRingBuffer.GetAvailableFrames();
+    if (mSharedMemory != nullptr) {
+        return mSharedMemory->GetAvailableFrames();
+    }
+    return 0;
 }
 
 // MARK: - Property Operations
@@ -94,9 +160,7 @@ bool SSChatMix_Device::HasProperty(AudioObjectID inObjectID,
     #pragma unused(inClientProcessID)
     
     // Delegate to child objects (streams, controls)
-    if (inObjectID == mInputStream.GetObjectID()) {
-        return mInputStream.HasProperty(inObjectID, inClientProcessID, inAddress);
-    } else if (inObjectID == mOutputStream.GetObjectID()) {
+    if (inObjectID == mOutputStream.GetObjectID()) {
         return mOutputStream.HasProperty(inObjectID, inClientProcessID, inAddress);
     } else if (inObjectID == mVolumeControl.GetObjectID()) {
         return mVolumeControl.HasProperty(inObjectID, inClientProcessID, inAddress);
@@ -129,6 +193,7 @@ bool SSChatMix_Device::HasProperty(AudioObjectID inObjectID,
         case kAudioDevicePropertyIsHidden:
         case kAudioDevicePropertyZeroTimeStampPeriod:
         case kAudioDevicePropertyPreferredChannelsForStereo:
+        case kAudioDevicePropertyIcon:
             theAnswer = true;
             break;
             
@@ -146,9 +211,7 @@ bool SSChatMix_Device::IsPropertySettable(AudioObjectID inObjectID,
     #pragma unused(inClientProcessID)
     
     // Delegate to child objects (streams, controls)
-    if (inObjectID == mInputStream.GetObjectID()) {
-        return mInputStream.IsPropertySettable(inObjectID, inClientProcessID, inAddress);
-    } else if (inObjectID == mOutputStream.GetObjectID()) {
+    if (inObjectID == mOutputStream.GetObjectID()) {
         return mOutputStream.IsPropertySettable(inObjectID, inClientProcessID, inAddress);
     } else if (inObjectID == mVolumeControl.GetObjectID()) {
         return mVolumeControl.IsPropertySettable(inObjectID, inClientProcessID, inAddress);
@@ -179,6 +242,7 @@ bool SSChatMix_Device::IsPropertySettable(AudioObjectID inObjectID,
         case kAudioDevicePropertyIsHidden:
         case kAudioDevicePropertyZeroTimeStampPeriod:
         case kAudioDevicePropertyPreferredChannelsForStereo:
+        case kAudioDevicePropertyIcon:
             theAnswer = false;
             break;
             
@@ -203,10 +267,7 @@ UInt32 SSChatMix_Device::GetPropertyDataSize(AudioObjectID inObjectID,
     #pragma unused(inClientProcessID, inQualifierDataSize, inQualifierData)
     
     // Delegate to child objects (streams, controls)
-    if (inObjectID == mInputStream.GetObjectID()) {
-        return mInputStream.GetPropertyDataSize(inObjectID, inClientProcessID, inAddress,
-                                                 inQualifierDataSize, inQualifierData);
-    } else if (inObjectID == mOutputStream.GetObjectID()) {
+    if (inObjectID == mOutputStream.GetObjectID()) {
         return mOutputStream.GetPropertyDataSize(inObjectID, inClientProcessID, inAddress,
                                                   inQualifierDataSize, inQualifierData);
     } else if (inObjectID == mVolumeControl.GetObjectID()) {
@@ -253,19 +314,19 @@ UInt32 SSChatMix_Device::GetPropertyDataSize(AudioObjectID inObjectID,
             
         case kAudioObjectPropertyOwnedObjects:
             if (inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
-                theAnswer = 3 * sizeof(AudioObjectID);
+                theAnswer = 2 * sizeof(AudioObjectID);  // output stream + volume control
             } else if (inAddress->mScope == kAudioObjectPropertyScopeOutput) {
                 theAnswer = 2 * sizeof(AudioObjectID);
             } else {
-                theAnswer = sizeof(AudioObjectID);
+                theAnswer = 0;  // no input stream
             }
             break;
             
         case kAudioDevicePropertyStreams:
-            if (inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
-                theAnswer = 2 * sizeof(AudioObjectID);
+            if (inAddress->mScope == kAudioObjectPropertyScopeInput) {
+                theAnswer = 0;  // no input stream
             } else {
-                theAnswer = sizeof(AudioObjectID);
+                theAnswer = sizeof(AudioObjectID);  // only output stream
             }
             break;
             
@@ -279,6 +340,10 @@ UInt32 SSChatMix_Device::GetPropertyDataSize(AudioObjectID inObjectID,
             
         case kAudioDevicePropertyPreferredChannelsForStereo:
             theAnswer = 2 * sizeof(UInt32);
+            break;
+            
+        case kAudioDevicePropertyIcon:
+            theAnswer = sizeof(CFURLRef);
             break;
             
         default:
@@ -301,11 +366,7 @@ OSStatus SSChatMix_Device::GetPropertyData(AudioObjectID inObjectID,
     #pragma unused(inClientProcessID, inQualifierDataSize, inQualifierData, inDataSize)
     
     // Delegate to child objects (streams, controls)
-    if (inObjectID == mInputStream.GetObjectID()) {
-        return mInputStream.GetPropertyData(inObjectID, inClientProcessID, inAddress,
-                                             inQualifierDataSize, inQualifierData,
-                                             inDataSize, outDataSize, outData);
-    } else if (inObjectID == mOutputStream.GetObjectID()) {
+    if (inObjectID == mOutputStream.GetObjectID()) {
         return mOutputStream.GetPropertyData(inObjectID, inClientProcessID, inAddress,
                                               inQualifierDataSize, inQualifierData,
                                               inDataSize, outDataSize, outData);
@@ -408,13 +469,13 @@ OSStatus SSChatMix_Device::GetPropertyData(AudioObjectID inObjectID,
             
         case kAudioObjectPropertyOwnedObjects:
             if (inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
-                reinterpret_cast<AudioObjectID*>(outData)[0] = mInputStream.GetObjectID();
-                reinterpret_cast<AudioObjectID*>(outData)[1] = mOutputStream.GetObjectID();
-                reinterpret_cast<AudioObjectID*>(outData)[2] = mVolumeControl.GetObjectID();
-                outDataSize = 3 * sizeof(AudioObjectID);
+                // Only output stream + volume control (no input stream)
+                reinterpret_cast<AudioObjectID*>(outData)[0] = mOutputStream.GetObjectID();
+                reinterpret_cast<AudioObjectID*>(outData)[1] = mVolumeControl.GetObjectID();
+                outDataSize = 2 * sizeof(AudioObjectID);
             } else if (inAddress->mScope == kAudioObjectPropertyScopeInput) {
-                *reinterpret_cast<AudioObjectID*>(outData) = mInputStream.GetObjectID();
-                outDataSize = sizeof(AudioObjectID);
+                // No input stream
+                outDataSize = 0;
             } else if (inAddress->mScope == kAudioObjectPropertyScopeOutput) {
                 reinterpret_cast<AudioObjectID*>(outData)[0] = mOutputStream.GetObjectID();
                 reinterpret_cast<AudioObjectID*>(outData)[1] = mVolumeControl.GetObjectID();
@@ -425,15 +486,11 @@ OSStatus SSChatMix_Device::GetPropertyData(AudioObjectID inObjectID,
             break;
             
         case kAudioDevicePropertyStreams:
-            if (inAddress->mScope == kAudioObjectPropertyScopeInput || inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
-                *reinterpret_cast<AudioObjectID*>(outData) = mInputStream.GetObjectID();
-                if (inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
-                    reinterpret_cast<AudioObjectID*>(outData)[1] = mOutputStream.GetObjectID();
-                    outDataSize = 2 * sizeof(AudioObjectID);
-                } else {
-                    outDataSize = sizeof(AudioObjectID);
-                }
-            } else if (inAddress->mScope == kAudioObjectPropertyScopeOutput) {
+            if (inAddress->mScope == kAudioObjectPropertyScopeInput) {
+                // No input stream
+                outDataSize = 0;
+            } else if (inAddress->mScope == kAudioObjectPropertyScopeOutput || inAddress->mScope == kAudioObjectPropertyScopeGlobal) {
+                // Only output stream
                 *reinterpret_cast<AudioObjectID*>(outData) = mOutputStream.GetObjectID();
                 outDataSize = sizeof(AudioObjectID);
             } else {
@@ -464,7 +521,7 @@ OSStatus SSChatMix_Device::GetPropertyData(AudioObjectID inObjectID,
             break;
             
         case kAudioDevicePropertyZeroTimeStampPeriod:
-            *reinterpret_cast<UInt32*>(outData) = kSSChatMix_RingBufferFrames;
+            *reinterpret_cast<UInt32*>(outData) = kSSChatMix_IOBufferPeriod;
             outDataSize = sizeof(UInt32);
             break;
             
@@ -472,6 +529,25 @@ OSStatus SSChatMix_Device::GetPropertyData(AudioObjectID inObjectID,
             reinterpret_cast<UInt32*>(outData)[0] = 1;
             reinterpret_cast<UInt32*>(outData)[1] = 2;
             outDataSize = 2 * sizeof(UInt32);
+            break;
+            
+        case kAudioDevicePropertyIcon:
+            {
+                // Get the plugin bundle and construct URL to the icon file
+                CFBundleRef bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.k0nker.SSChatMixPlugin"));
+                if (bundle != NULL) {
+                    CFURLRef iconURL = CFBundleCopyResourceURL(bundle, CFSTR("SSChatMixIcon"), CFSTR("icns"), NULL);
+                    if (iconURL != NULL) {
+                        *reinterpret_cast<CFURLRef*>(outData) = iconURL;
+                        outDataSize = sizeof(CFURLRef);
+                        // Note: caller is responsible for releasing the URL
+                    } else {
+                        result = kAudioHardwareUnknownPropertyError;
+                    }
+                } else {
+                    result = kAudioHardwareUnknownPropertyError;
+                }
+            }
             break;
             
         default:

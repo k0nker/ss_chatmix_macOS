@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# Pre-install script for SSChatMixPlugin.driver
+# This script runs before the package is installed
+# Removes existing plugin and restarts audio services
+#
+
+CONSOLE_USER=$(stat -f "%Su" /dev/console)
+CONSOLE_UID=$(id -u "$CONSOLE_USER")
+
+if [ "$CONSOLE_USER" = "root" ] || [ -z "$CONSOLE_USER" ]; then
+    echo "No active GUI user detected. Skipping TCC user reset."
+else
+    echo "Resetting Microphone TCC permissions for user: $CONSOLE_USER ($CONSOLE_UID)"
+
+    # 4. Use launchctl asuser to force execution inside the user's specific context
+    launchctl asuser "$CONSOLE_UID" tccutil reset Microphone com.k0nker.SSChatMix
+fi
+
+PLUGIN_PATH="/Library/Audio/Plug-Ins/HAL/SSChatMixPlugin.driver"
+
+echo "SSChatMix Pre-Install: Starting..." >>/tmp/sschatmix-install.log
+
+# Check if plugin is already installed
+if [ -d "$PLUGIN_PATH" ]; then
+    echo "Existing plugin found at $PLUGIN_PATH" >>/tmp/sschatmix-install.log
+    echo "Removing existing plugin..." >>/tmp/sschatmix-install.log
+
+    # Remove existing plugin
+    rm -rf "$PLUGIN_PATH" 2>>/tmp/sschatmix-install.log
+
+    if [ $? -eq 0 ]; then
+        echo "Successfully removed existing plugin" >>/tmp/sschatmix-install.log
+    else
+        echo "WARNING: Failed to remove existing plugin" >>/tmp/sschatmix-install.log
+    fi
+else
+    echo "No existing plugin found (fresh install)" >>/tmp/sschatmix-install.log
+fi
+
+# Restart all audio services
+echo "Restarting audio services..." >>/tmp/sschatmix-install.log
+killall -9 coreaudiod audioaccessoryd audiomxd AirPlayXPCHelper 2>>/tmp/sschatmix-install.log
+
+# Wait for services to fully restart
+echo "Waiting for audio services to restart..." >>/tmp/sschatmix-install.log
+sleep 15
+
+echo "SSChatMix Pre-Install: Complete" >>/tmp/sschatmix-install.log
+exit 0

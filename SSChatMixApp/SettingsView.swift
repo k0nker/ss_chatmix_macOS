@@ -63,31 +63,44 @@ struct SettingsView: View {
                             }
                         }
                         
-                        DevicePickerRow(
-                            icon: "gamecontroller.fill",
-                            label: "Game Audio",
-                            selection: $controller.selectedGameDevice,
-                            devices: controller.availableAudioDevices
-                        ) { device in
-                            device.name
-                        } onChange: { device in
-                            if let device = device {
-                                controller.selectGameDevice(device)
+                        // Game and Chat devices are locked to SSChatMix virtual devices
+                        HStack(spacing: 8) {
+                            Image(systemName: "gamecontroller.fill")
+                                .foregroundColor(.blue)
+                                .frame(width: 20)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Game Audio")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("SSChatMix Game")
+                                    .font(.system(size: 12))
                             }
+                            Spacer()
+                            Image(systemName: "lock.fill")
+                                .foregroundColor(.secondary)
+                                .font(.caption2)
                         }
+                        .padding(.vertical, 4)
+                        .help("Game audio source is locked to the SSChatMix Game virtual device")
                         
-                        DevicePickerRow(
-                            icon: "message.fill",
-                            label: "Chat Audio",
-                            selection: $controller.selectedChatDevice,
-                            devices: controller.availableAudioDevices
-                        ) { device in
-                            device.name
-                        } onChange: { device in
-                            if let device = device {
-                                controller.selectChatDevice(device)
+                        HStack(spacing: 8) {
+                            Image(systemName: "message.fill")
+                                .foregroundColor(.green)
+                                .frame(width: 20)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Chat Audio")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("SSChatMix Chat")
+                                    .font(.system(size: 12))
                             }
+                            Spacer()
+                            Image(systemName: "lock.fill")
+                                .foregroundColor(.secondary)
+                                .font(.caption2)
                         }
+                        .padding(.vertical, 4)
+                        .help("Chat audio source is locked to the SSChatMix Chat virtual device")
                         
                         DevicePickerRow(
                             icon: "headphones",

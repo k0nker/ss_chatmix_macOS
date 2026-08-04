@@ -11,7 +11,7 @@
 #include "SSChatMix_Object.h"
 #include "SSChatMix_Stream.h"
 #include "SSChatMix_Control.h"
-#include "SSChatMix_RingBuffer.h"
+#include "SSChatMix_SharedMemory.h"
 
 // MARK: - Device Object Class
 
@@ -21,7 +21,6 @@ public:
                      const char* inDeviceName,
                      const char* inDeviceUID,
                      const char* inModelUID,
-                     AudioObjectID inInputStreamID,
                      AudioObjectID inOutputStreamID,
                      AudioObjectID inVolumeControlID);
     
@@ -56,7 +55,6 @@ public:
                                      void* outData) const;
     
     // Accessors
-    SSChatMix_Stream& GetInputStream() { return mInputStream; }
     SSChatMix_Stream& GetOutputStream() { return mOutputStream; }
     SSChatMix_Control& GetVolumeControl() { return mVolumeControl; }
     const char* GetDeviceName() const { return mDeviceName; }
@@ -80,7 +78,6 @@ public:
 private:
     const char* mDeviceName;
     const char* mDeviceUID;
-    SSChatMix_Stream mInputStream;
     SSChatMix_Stream mOutputStream;
     SSChatMix_Control mVolumeControl;
     
@@ -92,8 +89,8 @@ private:
     // IO state
     bool mIsIORunning;
     
-    // Audio buffer
-    SSChatMix_RingBuffer mRingBuffer;
+    // Shared memory audio buffer (no input stream - bypasses microphone TCC)
+    SSChatMix_SharedMemory* mSharedMemory;
 };
 
 #endif /* SSChatMix_Device_h */
