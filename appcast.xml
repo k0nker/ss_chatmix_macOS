@@ -11,7 +11,7 @@
         <item>
             <title>Version 1.1</title>
             <link>https://github.com/k0nker/ss_chatmix_macOS/releases/tag/v1.1</link>
-            <sparkle:version>1.1</sparkle:version>
+            <sparkle:version>1.1.0</sparkle:version>
             <sparkle:shortVersionString>1.1</sparkle:shortVersionString>
             <description><![CDATA[
         <h2>What's New in v1.1</h2>
@@ -31,7 +31,7 @@
         </ul>
     ]]>            </description>
             <pubDate>Tue, 04 Aug 2026 17:16:52 +0000</pubDate>
-            <enclosure url="https://github.com/k0nker/ss_chatmix_macOS/releases/download/v1.1/SSChatMix-1.1.dmg" sparkle:version="1.1" sparkle:shortVersionString="1.1" sparkle:edSignature="1kW4TT2cZsmOeNB+boLygQ/Gl9CKTgwP3HpEIRB5gLX8QEIZlxTfHDMJfb9UONUhuuOUeHp0FYv0fj9BOWfjAQ==" length="2340683" type="application/octet-stream" />
+            <enclosure url="https://github.com/k0nker/ss_chatmix_macOS/releases/download/v1.1/SSChatMix-1.1.dmg" sparkle:version="1.1.0" sparkle:shortVersionString="1.1" sparkle:edSignature="1kW4TT2cZsmOeNB+boLygQ/Gl9CKTgwP3HpEIRB5gLX8QEIZlxTfHDMJfb9UONUhuuOUeHp0FYv0fj9BOWfjAQ==" length="2340683" type="application/octet-stream" />
         </item>
         
         <item>
