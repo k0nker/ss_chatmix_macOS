@@ -12,26 +12,20 @@ config.json
 
 # Random
 .vscode
-Planning
-Reference
 .claude/
+
 
 # Distribution & Build (sensitive/local)
 DISTRIBUTION.md
-SPARKLE_SETUP.md
+
+
 ExportOptions.plist
-build_and_notarize.sh
-generate_sparkle_keys.sh
-quick_release.sh
-RELEASE_GUIDE.md
-create_dmg.sh
 build/
 *.edSignature
-build_plugin*
-install_plugin*
 installer/
+NonRepoFiles/
 
-# Sparkle keys (NEVER commit private key!)
+# Sparkle keys
 .sparkle_rsa
 .sparkle_rsa.pub
 ~/.sparkle_rsa

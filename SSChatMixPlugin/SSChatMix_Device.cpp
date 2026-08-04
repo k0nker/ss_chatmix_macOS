@@ -32,20 +32,25 @@ SSChatMix_Device::SSChatMix_Device(AudioObjectID inObjectID,
     // FIRST LINE: Verify constructor runs
     FILE* log = fopen("/tmp/sschatmix_plugin.log", "a");
     if (log) {
-        fprintf(log, "=== SSChatMix_Device constructor START: %s\n", inDeviceUID);
-        fclose(log);
+        fprintf(log, "\n=== SSChatMix_Device constructor START: %s ===\n", inDeviceUID);
+        fflush(log);
     }
     
     // Create shared memory buffer with unique name based on device type
     // Format: "/ssc.game" or "/ssc.chat" (must be ≤31 chars for macOS PSEMNAMLEN)
     const char* shortName = (strcmp(inDeviceUID, "SSChatMixGameDevice") == 0) ? "/ssc.game" : "/ssc.chat";
     
-    log = fopen("/tmp/sschatmix_plugin.log", "a");
     if (log) {
-        fprintf(log, "Creating SSChatMix_SharedMemory: %s\n", shortName);
-        fclose(log);
+        fprintf(log, "Device UID: %s -> shortName: %s\n", inDeviceUID, shortName);
+        fflush(log);
     }
+    
     mSharedMemory = new SSChatMix_SharedMemory(shortName, kSSChatMix_RingBufferFrames, kSSChatMix_Channels);
+    
+    if (log) {
+        fprintf(log, "Created SSChatMix_SharedMemory object at %p\n", mSharedMemory);
+        fflush(log);
+    }
     
     // DEBUG: Write to file to confirm this code runs
     FILE* debugFile = fopen("/tmp/sschatmix_device_created.txt", "a");
@@ -54,25 +59,28 @@ SSChatMix_Device::SSChatMix_Device(AudioObjectID inObjectID,
         fclose(debugFile);
     }
     
-    log = fopen("/tmp/sschatmix_plugin.log", "a");
     if (log) {
-        fprintf(log, "Calling InitializeAsWriter()\n");
-        fclose(log);
+        fprintf(log, "About to call InitializeAsWriter()...\n");
+        fflush(log);
     }
+    
     // Initialize as writer (plugin side)
     if (!mSharedMemory->InitializeAsWriter()) {
-        log = fopen("/tmp/sschatmix_plugin.log", "a");
         if (log) {
-            fprintf(log, "InitializeAsWriter() FAILED for %s\n", shortName);
-            fclose(log);
+            fprintf(log, "InitializeAsWriter() returned false\n");
+            fflush(log);
         }
         os_log_error(OS_LOG_DEFAULT, "Failed to initialize shared memory for device %s", inDeviceName);
         delete mSharedMemory;
         mSharedMemory = nullptr;
-    } else {
-        log = fopen("/tmp/sschatmix_plugin.log", "a");
         if (log) {
-            fprintf(log, "InitializeAsWriter() SUCCESS for %s\n", shortName);
+            fprintf(log, "Deleted mSharedMemory, returning from constructor\n");
+            fclose(log);
+        }
+    } else {
+        if (log) {
+            fprintf(log, "InitializeAsWriter() succeeded! mSharedMemory is ready\n");
+            fprintf(log, "=== SSChatMix_Device constructor COMPLETE for %s ===\n\n", inDeviceUID);
             fclose(log);
         }
     }

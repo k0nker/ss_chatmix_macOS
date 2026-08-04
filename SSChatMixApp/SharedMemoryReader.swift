@@ -92,38 +92,40 @@ class SharedMemoryReader {
             return 0
         }
         
-        // Get current positions (atomic loads)
-        let writePos = rb.pointee.writePosition
-        let readPos = rb.pointee.readPosition
+        // Get current positions (atomic loads) - convert to UInt64 for ring buffer math
+        let writePos = UInt64(rb.pointee.writePosition)
+        let readPos = UInt64(rb.pointee.readPosition)
+        let capacity = UInt64(rb.pointee.capacityFrames)
         
-        // Calculate available frames
-        let available = (writePos - readPos + rb.pointee.capacityFrames) % rb.pointee.capacityFrames
-        let framesToRead = min(frameCount, available)
+        // Calculate available frames using wrapping arithmetic for ring buffer
+        let available = (writePos &- readPos) % capacity
+        let framesToRead = min(UInt64(frameCount), available)
         
         if framesToRead == 0 {
             return 0
         }
         
         // Read in two chunks if wrapping around
-        let contiguousFrames = rb.pointee.capacityFrames - readPos
+        let contiguousFrames = capacity &- readPos
         let firstChunk = min(framesToRead, contiguousFrames)
-        let secondChunk = framesToRead - firstChunk
+        let secondChunk = framesToRead &- firstChunk
         
         // Copy first chunk
-        let samplesToCopy = firstChunk * rb.pointee.channelCount
-        buffer.update(from: audio + Int(readPos * rb.pointee.channelCount), count: Int(samplesToCopy))
+        let channelCount = UInt64(rb.pointee.channelCount)
+        let samplesToCopy = firstChunk * channelCount
+        buffer.update(from: audio + Int(readPos * channelCount), count: Int(samplesToCopy))
         
         // Copy second chunk if needed (wrap around)
         if secondChunk > 0 {
-            let samplesToCopy2 = secondChunk * rb.pointee.channelCount
-            (buffer + Int(firstChunk * rb.pointee.channelCount)).update(from: audio, count: Int(samplesToCopy2))
+            let samplesToCopy2 = secondChunk * channelCount
+            (buffer + Int(firstChunk * channelCount)).update(from: audio, count: Int(samplesToCopy2))
         }
         
         // Update read position
-        let newReadPos = (readPos + framesToRead) % rb.pointee.capacityFrames
-        rb.pointee.readPosition = newReadPos
+        let newReadPos = (readPos &+ framesToRead) % capacity
+        rb.pointee.readPosition = UInt32(newReadPos & 0xFFFFFFFF)
         
-        return framesToRead
+        return UInt32(framesToRead)
     }
     
     // Get number of frames available to read
@@ -132,9 +134,11 @@ class SharedMemoryReader {
             return 0
         }
         
-        let writePos = rb.pointee.writePosition
-        let readPos = rb.pointee.readPosition
+        let writePos = UInt64(rb.pointee.writePosition)
+        let readPos = UInt64(rb.pointee.readPosition)
+        let capacity = UInt64(rb.pointee.capacityFrames)
         
-        return (writePos - readPos + rb.pointee.capacityFrames) % rb.pointee.capacityFrames
+        let available = (writePos &- readPos) % capacity
+        return UInt32(min(available, UInt64(UInt32.max)))
     }
 }

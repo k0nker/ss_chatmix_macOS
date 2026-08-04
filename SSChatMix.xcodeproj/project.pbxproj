@@ -22,8 +22,8 @@
 		A122D40E30209BF100000BF4 /* SSChatMix_PlugIn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D40330209BF100000BF4 /* SSChatMix_PlugIn.cpp */; };
 		A122D40F30209BF100000BF4 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A122D3FB30209BF100000BF4 /* Info.plist */; };
 		A122D41030209BF100000BF4 /* SSChatMix_RingBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D41130209BF100000BF4 /* SSChatMix_RingBuffer.cpp */; };
-		A122D41430209BF100000BF5 /* SSChatMix_SharedMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D41530209BF100000BF5 /* SSChatMix_SharedMemory.cpp */; };
 		A122D41230209BF100000BF4 /* SSChatMix_Mixer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D41330209BF100000BF4 /* SSChatMix_Mixer.cpp */; };
+		A122D41430209BF100000BF5 /* SSChatMix_SharedMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A122D41530209BF100000BF5 /* SSChatMix_SharedMemory.cpp */; };
 		A1ASSETS001234560099A3FA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1ASSETS001234550099A3FA /* Assets.xcassets */; };
 		A1B271E23020727E00DFA33E /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B271E13020727E00DFA33E /* CoreAudio.framework */; };
 		A1B271E43020728500DFA33E /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B271E33020728500DFA33E /* CoreFoundation.framework */; };
@@ -32,6 +32,7 @@
 		A1ROUTER0001234560099AAA /* AudioRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1ROUTER0001234550099AAA /* AudioRouter.swift */; };
 		A1SHMEM0001234560099BBB /* SharedMemoryReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1SHMEM0001234550099BBB /* SharedMemoryReader.swift */; };
 		A1SHMHELP0012345600099CCC /* SharedMemoryHelper.c in Sources */ = {isa = PBXBuildFile; fileRef = A1SHMHELP0012345500099CCC /* SharedMemoryHelper.c */; };
+		A1UNINSTALL00123456789ABC /* uninstall in Resources */ = {isa = PBXBuildFile; fileRef = A1UNINSTALL00123456789ABB /* uninstall */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,10 +57,10 @@
 		A122D40630209BF100000BF4 /* SSChatMixPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMixPlugin.h; sourceTree = "<group>"; };
 		A122D40730209BF100000BF4 /* SSChatMixPlugin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMixPlugin.cpp; sourceTree = "<group>"; };
 		A122D41130209BF100000BF4 /* SSChatMix_RingBuffer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_RingBuffer.cpp; sourceTree = "<group>"; };
-		A122D41530209BF100000BF5 /* SSChatMix_SharedMemory.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_SharedMemory.cpp; sourceTree = "<group>"; };
-		A122D41630209BF100000BF5 /* SSChatMix_SharedMemory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_SharedMemory.h; sourceTree = "<group>"; };
 		A122D41330209BF100000BF4 /* SSChatMix_Mixer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_Mixer.cpp; sourceTree = "<group>"; };
 		A122D41430209BF100000BF4 /* SSChatMix_Mixer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_Mixer.h; sourceTree = "<group>"; };
+		A122D41530209BF100000BF5 /* SSChatMix_SharedMemory.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSChatMix_SharedMemory.cpp; sourceTree = "<group>"; };
+		A122D41630209BF100000BF5 /* SSChatMix_SharedMemory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSChatMix_SharedMemory.h; sourceTree = "<group>"; };
 		A1AFADB1301FE026001ED19B /* SSChatMix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SSChatMix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1ASSETS001234550099A3FA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1B271D73020708400DFA33E /* SSChatMixPlugin.driver */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SSChatMixPlugin.driver; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -70,6 +71,7 @@
 		A1SHMEM0001234550099BBB /* SharedMemoryReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMemoryReader.swift; sourceTree = "<group>"; };
 		A1SHMHELP0012345500099CCC /* SharedMemoryHelper.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SharedMemoryHelper.c; sourceTree = "<group>"; };
 		A1SHMHELP0012345500099DDD /* SharedMemoryHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SharedMemoryHelper.h; sourceTree = "<group>"; };
+		A1UNINSTALL00123456789ABB /* uninstall */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = uninstall; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +115,7 @@
 				A1012B7B301FE5920016B995 /* SettingsView.swift */,
 				A1C9F8E030205A1D0099A3FA /* SparkleUpdater.swift */,
 				A1012B6E301FE0CC0016B995 /* Resources */,
+				A1UNINSTALL00123456789ABB /* uninstall */,
 			);
 			path = SSChatMixApp;
 			sourceTree = "<group>";
@@ -252,6 +255,7 @@
 			isa = PBXResourcesBuildPhase;
 			files = (
 				A1ASSETS001234560099A3FA /* Assets.xcassets in Resources */,
+				A1UNINSTALL00123456789ABC /* uninstall in Resources */,
 			);
 		};
 		A1B271D53020708400DFA33E /* Resources */ = {
@@ -426,7 +430,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 69SD3NQCD8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -443,7 +447,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15;
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.k0nker.SSChatMix;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -465,7 +469,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 69SD3NQCD8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -482,7 +486,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15;
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.k0nker.SSChatMix;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
