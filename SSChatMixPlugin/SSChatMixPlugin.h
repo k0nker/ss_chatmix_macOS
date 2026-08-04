@@ -29,17 +29,21 @@ extern "C" {
 #define kSSChatMix_BitsPerChannel    32
 #define kSSChatMix_BytesPerFrame     (kSSChatMix_Channels * sizeof(Float32))
 
-// Ring buffer size (2 seconds of audio)
-#define kSSChatMix_RingBufferFrames  (kSSChatMix_SampleRate * 2)
+// Ring buffer size - 8192 frames = ~170ms max latency (4x IO buffer for safety)
+#define kSSChatMix_RingBufferFrames  8192
+
+// IO buffer period (frames per IO cycle - affects latency)
+#define kSSChatMix_IOBufferPeriod    2048
 
 // Object IDs for all HAL objects this driver publishes
 enum {
     kObjectID_PlugIn                = kAudioObjectPlugInObject,  // Always this value
     kObjectID_GameDevice            = 2,
     kObjectID_ChatDevice            = 3,
-    kObjectID_GameDevice_InputStream  = 4,
+    // Input streams removed - using shared memory instead to avoid TCC microphone restrictions
+    // kObjectID_GameDevice_InputStream  = 4,
     kObjectID_GameDevice_OutputStream = 5,
-    kObjectID_ChatDevice_InputStream  = 6,
+    // kObjectID_ChatDevice_InputStream  = 6,
     kObjectID_ChatDevice_OutputStream = 7,
     kObjectID_GameDevice_VolumeControl = 8,
     kObjectID_ChatDevice_VolumeControl = 9,
