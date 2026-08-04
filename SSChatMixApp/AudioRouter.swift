@@ -1,5 +1,6 @@
 import Foundation
 import CoreAudio
+import Accelerate
 import os.log
 
 /// Audio router that reads from SSChatMix virtual device shared memory (bypasses input streams),
@@ -106,27 +107,28 @@ public class AudioRouter {
             let frameCount = Int(buffer.mDataByteSize) / (MemoryLayout<Float32>.size * router.channels)
             let frames = min(frameCount, router.maxFrames)
             
-            // Read from shared memory
+            // Read from shared memory (buffers zeroed by reader if no data)
             let gameFramesRead = router.gameReader.read(into: router.gameBuffer, frameCount: UInt32(frames))
             let chatFramesRead = router.chatReader.read(into: router.chatBuffer, frameCount: UInt32(frames))
             
             let audioData = data.assumingMemoryBound(to: Float32.self)
             
-            // Mix Game + Chat with volume control
-            for i in 0..<(frames * router.channels) {
-                let gameSample = router.gameBuffer[i] * router.gameVolume
-                let chatSample = router.chatBuffer[i] * router.chatVolume
-                var mixedSample = gameSample + chatSample
-                
-                // Clipping prevention
-                if mixedSample > 1.0 {
-                    mixedSample = 1.0
-                } else if mixedSample < -1.0 {
-                    mixedSample = -1.0
-                }
-                
-                audioData[i] = mixedSample
-            }
+            // Cache volumes for realtime safety (var for vDSP inout parameters)
+            var gVol = router.gameVolume
+            var cVol = router.chatVolume
+            let totalSamples = vDSP_Length(frames * router.channels)
+            
+            // Hardware-accelerated mixing using vDSP (Accelerate framework)
+            // 1. Scale game buffer by volume: audioData = gameBuffer * gVol
+            vDSP_vsmul(router.gameBuffer, 1, &gVol, audioData, 1, totalSamples)
+            
+            // 2. Scale and add chat buffer: audioData = audioData + (chatBuffer * cVol)
+            vDSP_vsma(router.chatBuffer, 1, &cVol, audioData, 1, audioData, 1, totalSamples)
+            
+            // 3. Clip to prevent distortion: clamp values to [-1.0, 1.0]
+            var minusOne: Float = -1.0
+            var plusOne: Float = 1.0
+            vDSP_vclip(audioData, 1, &minusOne, &plusOne, audioData, 1, totalSamples)
             
             return kAudioHardwareNoError
         }

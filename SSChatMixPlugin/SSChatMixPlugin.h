@@ -29,8 +29,8 @@ extern "C" {
 #define kSSChatMix_BitsPerChannel    32
 #define kSSChatMix_BytesPerFrame     (kSSChatMix_Channels * sizeof(Float32))
 
-// Ring buffer size (2 seconds of audio for buffering)
-#define kSSChatMix_RingBufferFrames  (kSSChatMix_SampleRate * 2)
+// Ring buffer size - 8192 frames = ~170ms max latency (4x IO buffer for safety)
+#define kSSChatMix_RingBufferFrames  8192
 
 // IO buffer period (frames per IO cycle - affects latency)
 #define kSSChatMix_IOBufferPeriod    2048

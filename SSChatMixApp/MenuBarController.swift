@@ -400,7 +400,68 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             print("⚠️  Could not check plugin attributes: \(error)")
         }
         
+        // Check plugin version matches required version
+        if let versionMismatch = checkPluginVersion(pluginPath: pluginPath) {
+            print("⚠️  Plugin version mismatch: \(versionMismatch)")
+            statusMessage = "Plugin version mismatch"
+            showPluginVersionAlert(mismatch: versionMismatch)
+            return
+        }
+        
         print("✅ HAL plugin verified at: \(pluginPath)")
+    }
+    
+    /// Check if installed plugin version matches required version
+    /// - Returns: Error message if mismatch, nil if versions match
+    private func checkPluginVersion(pluginPath: String) -> String? {
+        // Read required version from app's Info.plist
+        guard let requiredVersion = Bundle.main.infoDictionary?["SSChatMixRequiredPluginVersion"] as? String else {
+            print("⚠️  SSChatMixRequiredPluginVersion not found in app's Info.plist")
+            return nil  // If not specified, don't enforce
+        }
+        
+        // Read installed plugin version
+        let pluginInfoPath = "\(pluginPath)/Contents/Info.plist"
+        guard let pluginInfo = NSDictionary(contentsOfFile: pluginInfoPath),
+              let installedVersion = pluginInfo["CFBundleShortVersionString"] as? String else {
+            return "Could not read plugin version from \(pluginInfoPath)"
+        }
+        
+        // Compare versions
+        if installedVersion != requiredVersion {
+            return "Installed: \(installedVersion), Required: \(requiredVersion)"
+        }
+        
+        return nil  // Versions match
+    }
+    
+    /// Show alert when plugin version doesn't match
+    private func showPluginVersionAlert(mismatch: String) {
+        let alert = NSAlert()
+        alert.messageText = "Plugin Version Mismatch"
+        alert.informativeText = """
+        The installed HAL plugin version does not match the required version.
+        
+        \(mismatch)
+        
+        To fix this issue:
+        1. Download the latest release from GitHub
+        2. Install SSChatMixPlugin-X.X.pkg first
+        3. Then install SSChatMix-X.X.dmg
+        
+        The app may not work correctly until the plugin is updated.
+        """
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Download Update")
+        alert.addButton(withTitle: "Continue Anyway")
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            // Open releases page
+            if let url = URL(string: "https://github.com/k0nker/ss_chatmix_macOS/releases") {
+                NSWorkspace.shared.open(url)
+            }
+        }
     }
     
     // MARK: - Menu Bar

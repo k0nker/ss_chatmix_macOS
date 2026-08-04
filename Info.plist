@@ -8,6 +8,8 @@
 	<true/>
 	<key>NSSupportsSuddenTermination</key>
 	<false/>
+	<key>SSChatMixRequiredPluginVersion</key>
+	<string>1.0</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
