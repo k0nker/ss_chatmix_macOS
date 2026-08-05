@@ -2,6 +2,7 @@ import Foundation
 import CoreAudio
 import Accelerate
 import os.log
+import Darwin
 
 /// Audio router that reads from SSChatMix virtual device shared memory (bypasses input streams),
 /// mixes audio with volume control, and outputs to a physical device.
@@ -37,6 +38,13 @@ public class AudioRouter {
     // Thread safety
     private let queue = DispatchQueue(label: "com.k0nker.sschatmix.audiorouter", qos: .userInteractive)
     
+    // Real-time thread management
+    private var hasSetRealtimePriority = false
+    
+    // Underrun detection
+    private var underrunCount: UInt32 = 0
+    private let maxUnderrunsBeforeWarning: UInt32 = 5
+    
     private let logger = Logger(subsystem: "com.k0nker.sschatmix", category: "AudioRouter")
     
     public init(gameDeviceUID: String, chatDeviceUID: String, outputDeviceID: AudioDeviceID) {
@@ -64,6 +72,48 @@ public class AudioRouter {
         gameBuffer.deallocate()
         chatBuffer.deinitialize(count: bufferSize)
         chatBuffer.deallocate()
+    }
+    
+    /// Set real-time thread priority for the current thread
+    /// Based on BackgroundMusic's approach: prevents preemption during audio callbacks
+    private func setRealtimePriority() {
+        var timeConstraintPolicy = thread_time_constraint_policy()
+        
+        // Convert nanoseconds to absolute time units (Mach timebase)
+        var timebaseInfo = mach_timebase_info_data_t()
+        mach_timebase_info(&timebaseInfo)
+        
+        let nsToAbsolute = { (ns: UInt64) -> UInt32 in
+            return UInt32((ns * UInt64(timebaseInfo.denom)) / UInt64(timebaseInfo.numer))
+        }
+        
+        // 50μs nominal computation, 60μs maximum
+        // These are conservative values that prevent system lockup while ensuring real-time performance
+        timeConstraintPolicy.computation = nsToAbsolute(50_000)  // 50 microseconds
+        timeConstraintPolicy.constraint = nsToAbsolute(60_000)   // 60 microseconds  
+        timeConstraintPolicy.period = 0                          // No inherent periodicity
+        timeConstraintPolicy.preemptible = 1                     // Allow preemption by higher RT threads
+        
+        let policyCount = mach_msg_type_number_t(
+            MemoryLayout<thread_time_constraint_policy>.size / MemoryLayout<integer_t>.size
+        )
+        
+        let result = withUnsafeMutablePointer(to: &timeConstraintPolicy) { ptr in
+            ptr.withMemoryRebound(to: integer_t.self, capacity: Int(policyCount)) { intPtr in
+                thread_policy_set(
+                    pthread_mach_thread_np(pthread_self()),
+                    thread_policy_flavor_t(THREAD_TIME_CONSTRAINT_POLICY),
+                    intPtr,
+                    policyCount
+                )
+            }
+        }
+        
+        if result == KERN_SUCCESS {
+            logger.info("✅ Set real-time thread priority for audio callback")
+        } else {
+            logger.warning("⚠️ Failed to set real-time thread priority: \(result)")
+        }
     }
     
     /// Start audio routing
@@ -98,6 +148,12 @@ public class AudioRouter {
             
             let router = Unmanaged<AudioRouter>.fromOpaque(clientData).takeUnretainedValue()
             
+            // Set real-time thread priority on first invocation
+            if !router.hasSetRealtimePriority {
+                router.setRealtimePriority()
+                router.hasSetRealtimePriority = true
+            }
+            
             // Write mixed audio to output stream
             let buffer = outOutputData.pointee.mBuffers
             guard let data = buffer.mData else {
@@ -110,6 +166,18 @@ public class AudioRouter {
             // Read from shared memory (buffers zeroed by reader if no data)
             let gameFramesRead = router.gameReader.read(into: router.gameBuffer, frameCount: UInt32(frames))
             let chatFramesRead = router.chatReader.read(into: router.chatBuffer, frameCount: UInt32(frames))
+            
+            // Detect underruns (when we can't read enough frames)
+            if gameFramesRead < UInt32(frames) || chatFramesRead < UInt32(frames) {
+                router.underrunCount += 1
+                if router.underrunCount == router.maxUnderrunsBeforeWarning {
+                    // Log once when threshold reached (avoid flooding logs)
+                    router.logger.error("Buffer underrun: game=\(gameFramesRead)/\(frames) chat=\(chatFramesRead)/\(frames)")
+                }
+            } else {
+                // Reset counter when we have healthy reads
+                router.underrunCount = 0
+            }
             
             let audioData = data.assumingMemoryBound(to: Float32.self)
             

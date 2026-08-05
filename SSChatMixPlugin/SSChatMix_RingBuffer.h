@@ -39,6 +39,7 @@ public:
 private:
     Float32* mBuffer;
     UInt32 mCapacityFrames;
+    UInt32 mCapacityMask;  // For fast modulo: (mCapacityFrames - 1) when capacity is power of 2
     UInt32 mChannelCount;
     UInt32 mBytesPerFrame;
     
