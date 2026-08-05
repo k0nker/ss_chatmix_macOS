@@ -14,6 +14,7 @@
 SSChatMix_SharedMemory::SSChatMix_SharedMemory(const char* name, UInt32 capacityFrames, UInt32 channelCount)
 :
     mCapacityFrames(capacityFrames),
+    mCapacityMask(capacityFrames - 1),  // For power-of-2: 8192 - 1 = 8191 = 0x1FFF
     mChannelCount(channelCount),
     mBytesPerFrame(channelCount * sizeof(Float32)),
     mMemoryAddress(nullptr),
@@ -23,6 +24,11 @@ SSChatMix_SharedMemory::SSChatMix_SharedMemory(const char* name, UInt32 capacity
     mIsWriter(false),
     mIsAttached(false)
 {
+    // Verify capacity is a power of 2 (required for bit masking optimization)
+    if ((capacityFrames & (capacityFrames - 1)) != 0) {
+        fprintf(stderr, "[SSChatMix] WARNING: Shared memory buffer capacity %u is not a power of 2!\n", capacityFrames);
+    }
+    
     strncpy(mName, name, sizeof(mName) - 1);
     mName[sizeof(mName) - 1] = '\0';
     
@@ -168,8 +174,8 @@ UInt32 SSChatMix_SharedMemory::Write(const Float32* data, UInt32 frameCount) {
     UInt32 writePos = mRingBuffer->writePosition.load(std::memory_order_acquire);
     UInt32 readPos = mRingBuffer->readPosition.load(std::memory_order_acquire);
     
-    // Calculate available space
-    UInt32 freeSpace = (readPos - writePos - 1 + mCapacityFrames) % mCapacityFrames;
+    // Calculate available space (use bit masking for fast modulo since capacity is power of 2)
+    UInt32 freeSpace = (readPos - writePos - 1 + mCapacityFrames) & mCapacityMask;
     
     // Limit to available space
     UInt32 framesToWrite = std::min(frameCount, freeSpace);
@@ -192,8 +198,8 @@ UInt32 SSChatMix_SharedMemory::Write(const Float32* data, UInt32 frameCount) {
         memcpy(mAudioData, data + samplesToCopy, secondSamples * sizeof(Float32));
     }
     
-    // Update write position
-    UInt32 newWritePos = (writePos + framesToWrite) % mCapacityFrames;
+    // Update write position (bit masking for fast modulo)
+    UInt32 newWritePos = (writePos + framesToWrite) & mCapacityMask;
     mRingBuffer->writePosition.store(newWritePos, std::memory_order_release);
     
     return framesToWrite;
@@ -208,8 +214,8 @@ UInt32 SSChatMix_SharedMemory::Read(Float32* data, UInt32 frameCount) {
     UInt32 readPos = mRingBuffer->readPosition.load(std::memory_order_acquire);
     UInt32 writePos = mRingBuffer->writePosition.load(std::memory_order_acquire);
     
-    // Calculate available data
-    UInt32 availableFrames = (writePos - readPos + mCapacityFrames) % mCapacityFrames;
+    // Calculate available data (use bit masking for fast modulo since capacity is power of 2)
+    UInt32 availableFrames = (writePos - readPos + mCapacityFrames) & mCapacityMask;
     
     // Limit to available data
     UInt32 framesToRead = std::min(frameCount, availableFrames);
@@ -240,8 +246,8 @@ UInt32 SSChatMix_SharedMemory::Read(Float32* data, UInt32 frameCount) {
         memset(data + (framesToRead * mChannelCount), 0, silenceFrames * mChannelCount * sizeof(Float32));
     }
     
-    // Update read position
-    UInt32 newReadPos = (readPos + framesToRead) % mCapacityFrames;
+    // Update read position (bit masking for fast modulo)
+    UInt32 newReadPos = (readPos + framesToRead) & mCapacityMask;
     mRingBuffer->readPosition.store(newReadPos, std::memory_order_release);
     
     return framesToRead;
@@ -255,7 +261,7 @@ UInt32 SSChatMix_SharedMemory::GetAvailableFrames() const {
     UInt32 readPos = mRingBuffer->readPosition.load(std::memory_order_acquire);
     UInt32 writePos = mRingBuffer->writePosition.load(std::memory_order_acquire);
     
-    return (writePos - readPos + mCapacityFrames) % mCapacityFrames;
+    return (writePos - readPos + mCapacityFrames) & mCapacityMask;  // Bit masking for fast modulo
 }
 
 UInt32 SSChatMix_SharedMemory::GetFreeSpace() const {
@@ -266,7 +272,7 @@ UInt32 SSChatMix_SharedMemory::GetFreeSpace() const {
     UInt32 readPos = mRingBuffer->readPosition.load(std::memory_order_acquire);
     UInt32 writePos = mRingBuffer->writePosition.load(std::memory_order_acquire);
     
-    return (readPos - writePos - 1 + mCapacityFrames) % mCapacityFrames;
+    return (readPos - writePos - 1 + mCapacityFrames) & mCapacityMask;  // Bit masking for fast modulo
 }
 
 void SSChatMix_SharedMemory::Reset() {

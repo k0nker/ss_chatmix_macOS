@@ -11,6 +11,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 ### Removed
 
+## [1.2.0] - 2026-08-05
+
+### Changed
+- Audio callback now runs with real-time scheduling guarantees
+- Ring buffer operations use bit masking instead of modulo for faster execution
+- Better handling of buffer underruns with automatic recovery
+- Implemented real-time thread priority for audio callbacks
+
+### Fixed
+- Fixed audio crackling and popping during system load</li>
+- Fixed audio crackling when opening/closing applications</li>
+- Optimized ring buffer operations for better performance</li>
+- Added underrun detection and logging for diagnostics</li>
+
 ## [1.1.0] - 2026-08-04
 
 ### Added
