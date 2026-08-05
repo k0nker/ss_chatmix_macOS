@@ -20,8 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented real-time thread priority for audio callbacks
 
 ### Fixed
-- Fixed audio crackling and popping during system load</li>
-- Fixed audio crackling when opening/closing applications</li>
+- Reduced audio crackling and popping during system load</li>
+- Reduced audio crackling when opening/closing applications</li>
 - Optimized ring buffer operations for better performance</li>
 - Added underrun detection and logging for diagnostics</li>
 
