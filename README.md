@@ -22,10 +22,8 @@ SSChatMix includes **built-in virtual audio devices** - no third-party tools req
 - ✅ **No microphone permissions required!**
 - ✅ **Shared memory architecture** (no audio capture API)
 - ✅ **Low latency** (~42ms IO period, ~170ms max buffer)
-- ✅ **Zero CPU mixing** with hardware acceleration
+- ✅ **Near Zero CPU** with hardware acceleration
 - ⚠️  **Note:** Audio may stutter when apps that require microphone access are opened (macOS CoreAudio limitation)
-
-**Performance:** < 0.5% CPU, hardware-accelerated audio mixing
 
 ## Features
 
