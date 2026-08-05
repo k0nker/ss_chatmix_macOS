@@ -23,8 +23,8 @@
         </ul>
         <h3>Fixed</h3>
         <ul>
-            <li>Fixed audio crackling and popping during system load</li></li>
-            <li>Fixed audio crackling when opening/closing applications</li></li>
+            <li>Reduced audio crackling and popping during system load</li></li>
+            <li>Reduced audio crackling when opening/closing applications</li></li>
             <li>Optimized ring buffer operations for better performance</li></li>
             <li>Added underrun detection and logging for diagnostics</li></li>
         </ul>
