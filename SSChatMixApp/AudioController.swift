@@ -80,6 +80,31 @@ public class AudioController {
         let devices = try listOutputDevices()
         return devices.first(where: { $0.uid == uid })?.id
     }
+
+    public func getDefaultOutputDeviceUID() throws -> String {
+        var propertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        var deviceID: AudioDeviceID = 0
+        var dataSize = UInt32(MemoryLayout<AudioDeviceID>.size)
+
+        let status = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &propertyAddress,
+            0, nil,
+            &dataSize,
+            &deviceID
+        )
+
+        guard status == noErr else {
+            throw SSChatMixError.audioControllerFailed("Failed to get default output device")
+        }
+
+        return try getDeviceUID(deviceID)
+    }
     
     // MARK: - SSChatMix Device Detection
     

@@ -21,8 +21,8 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     private let configManager = ConfigManager()
     
     // State
-    @Published var gameVolume: Int = 50
-    @Published var chatVolume: Int = 50
+    @Published var gameVolume: Int = 100
+    @Published var chatVolume: Int = 100
     @Published var isRunning: Bool = false
     @Published var statusMessage: String = "Not configured"
     
@@ -41,6 +41,15 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     
     // Windows
     var settingsWindow: NSWindow?
+
+    // Auto-reload monitor state
+    private var deviceMonitorTimer: Timer?
+    private var lastKnownHIDDevicePresent: Bool?
+    private var lastKnownAudioDeviceUIDs = Set<String>()
+    private var lastKnownDefaultOutputUID: String?
+    private var isAutoReloadScheduled = false
+    private var lastAutoReloadAt: Date = .distantPast
+    private let autoReloadDebounceInterval: TimeInterval = 1.5
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Check if HAL plugin is installed with correct permissions
@@ -66,6 +75,8 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 self?.updateMenu()
             }
         }
+
+        startDeviceChangeMonitor()
         
         // Load config if exists
         if configManager.exists() {
@@ -773,7 +784,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
                 outputDeviceID: foundOutputDeviceID
             )
             try router.start()
-            router.updateVolumes(game: 50.0, chat: 50.0) // Initial 50/50 balance
+            router.updateVolumes(game: 100.0, chat: 100.0) // Initial 50/50 balance
             self.audioRouter = router
             print("Audio router started with shared memory bypass")
             
@@ -806,6 +817,114 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
         chatDeviceID = nil
         isRunning = false
         updateMenuBarIcon()
+    }
+
+    private func startDeviceChangeMonitor() {
+        if deviceMonitorTimer != nil {
+            return
+        }
+
+        initializeDeviceChangeBaseline()
+
+        deviceMonitorTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.checkForDeviceChanges()
+        }
+        RunLoop.main.add(deviceMonitorTimer!, forMode: .common)
+    }
+
+    private func stopDeviceChangeMonitor() {
+        deviceMonitorTimer?.invalidate()
+        deviceMonitorTimer = nil
+    }
+
+    private func initializeDeviceChangeBaseline() {
+        do {
+            let devices = try audioController.listOutputDevices()
+            lastKnownAudioDeviceUIDs = Set(devices.map { $0.uid })
+        } catch {
+            print("⚠️ Failed to initialize audio device baseline: \(error)")
+            lastKnownAudioDeviceUIDs = []
+        }
+
+        do {
+            lastKnownDefaultOutputUID = try audioController.getDefaultOutputDeviceUID()
+        } catch {
+            print("⚠️ Failed to initialize default output baseline: \(error)")
+            lastKnownDefaultOutputUID = nil
+        }
+
+        if let config = config,
+           let vendorID = Int(config.hidDevice.vendorId.dropFirst(2), radix: 16),
+           let productID = Int(config.hidDevice.productId.dropFirst(2), radix: 16) {
+            let hidDevices = HIDController().listChatMixDevices()
+            lastKnownHIDDevicePresent = hidDevices.contains {
+                $0.vendorID == vendorID && $0.productID == productID
+            }
+        } else {
+            lastKnownHIDDevicePresent = nil
+        }
+    }
+
+    private func checkForDeviceChanges() {
+        guard config != nil else { return }
+
+        do {
+            let devices = try audioController.listOutputDevices()
+            let currentAudioUIDs = Set(devices.map { $0.uid })
+
+            if !lastKnownAudioDeviceUIDs.isEmpty && currentAudioUIDs != lastKnownAudioDeviceUIDs {
+                scheduleAutoReload(reason: "Audio device list changed")
+            }
+            lastKnownAudioDeviceUIDs = currentAudioUIDs
+
+            let currentDefaultOutputUID = try audioController.getDefaultOutputDeviceUID()
+            if let previousDefault = lastKnownDefaultOutputUID,
+               currentDefaultOutputUID != previousDefault {
+                scheduleAutoReload(reason: "System default output changed")
+            }
+            lastKnownDefaultOutputUID = currentDefaultOutputUID
+        } catch {
+            print("⚠️ Device monitor audio check failed: \(error)")
+        }
+
+        if let config = config,
+           let vendorID = Int(config.hidDevice.vendorId.dropFirst(2), radix: 16),
+           let productID = Int(config.hidDevice.productId.dropFirst(2), radix: 16) {
+            let hidDevices = HIDController().listChatMixDevices()
+            let currentHIDPresent = hidDevices.contains {
+                $0.vendorID == vendorID && $0.productID == productID
+            }
+
+            if let previousHIDPresent = lastKnownHIDDevicePresent,
+               currentHIDPresent != previousHIDPresent {
+                scheduleAutoReload(reason: currentHIDPresent ? "ChatMix HID device connected" : "ChatMix HID device disconnected")
+            }
+
+            lastKnownHIDDevicePresent = currentHIDPresent
+        }
+    }
+
+    private func scheduleAutoReload(reason: String) {
+        let now = Date()
+
+        if isAutoReloadScheduled {
+            return
+        }
+
+        if now.timeIntervalSince(lastAutoReloadAt) < autoReloadDebounceInterval {
+            return
+        }
+
+        isAutoReloadScheduled = true
+        lastAutoReloadAt = now
+
+        print("🔁 Auto reload triggered: \(reason)")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self = self else { return }
+            self.reloadConfig()
+            self.isAutoReloadScheduled = false
+        }
     }
     
     @objc func restartController() {
@@ -1122,6 +1241,7 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
     }
     
     @objc func quit() {
+        stopDeviceChangeMonitor()
         stopController()
         NSApplication.shared.terminate(nil)
     }
