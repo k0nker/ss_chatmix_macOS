@@ -1,5 +1,16 @@
 import Foundation
 import IOKit.hid
+import Darwin
+
+// Load IOHIDDeviceOpenSync from IOKit framework (not exposed in Swift's IOKit.hid)
+private let _iokitHandle: UnsafeMutableRawPointer? = {
+    dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", RTLD_NOW)
+}()
+private let IOHIDDeviceOpenSync: (IOHIDDevice, UInt32) -> IOReturn = {
+    guard let handle = _iokitHandle else { return { _, _ in kIOReturnInternalError } }
+    guard let symbol = dlsym(handle, "IOHIDDeviceOpenSync") else { return { _, _ in kIOReturnInternalError } }
+    return unsafeBitCast(symbol, to: ((IOHIDDevice, UInt32) -> IOReturn).self)
+}()
 
 public struct ChatMixDevice: Hashable {
     public let vendorID: Int
@@ -34,6 +45,11 @@ public class HIDController {
     
     // Track logged report IDs to avoid spam
     private var loggedReportIDs = Set<UInt8>()
+    
+    // Query synchronization
+    private var lastReportData: [UInt8] = []
+    private var querySemaphore = DispatchSemaphore(value: 0)
+    private var isWaitingForQuery = false
     
     // Device IDs - configurable
     private var vendorID: Int = 0x1038  // SteelSeries (default)
@@ -186,6 +202,30 @@ public class HIDController {
             }
             
             print("   HID manager opened successfully on background thread, listening for reports...")
+            
+            // Extract the actual IOHIDDevice from the manager's device set for query support
+            let queryManager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+            let queryMatching: [String: Any] = [
+                kIOHIDVendorIDKey: self.vendorID,
+                kIOHIDProductIDKey: self.productID,
+                kIOHIDPrimaryUsagePageKey: self.usagePage
+            ]
+            IOHIDManagerSetDeviceMatching(queryManager, queryMatching as CFDictionary)
+            IOHIDManagerOpen(queryManager, IOOptionBits(kIOHIDOptionsTypeNone))
+            if let deviceSet = IOHIDManagerCopyDevices(queryManager) as? Set<IOHIDDevice>,
+               let firstDevice = deviceSet.first {
+                // Open the device so we can send feature report queries
+                let openResult = IOHIDDeviceOpenSync(firstDevice, IOOptionBits(kIOHIDOptionsTypeNone))
+                if openResult == kIOReturnSuccess {
+                    self.device = firstDevice
+                    let devName = IOHIDDeviceGetProperty(firstDevice, kIOHIDProductKey as CFString) as? String ?? "unknown"
+                    print("   Device extracted and opened for query support: \(devName)")
+                } else {
+                    print("   ⚠️  Failed to open device for queries (result: \(openResult))")
+                }
+            }
+            // queryManager is auto-released in Swift; no CFRelease needed
+            
             semaphore.signal()
             
             // Run the run loop
@@ -226,6 +266,167 @@ public class HIDController {
         self.hidThread = nil
     }
     
+    // MARK: - Query ChatMix Position
+    
+    /// Query the dongle for the current ChatMix dial position.
+    /// Tries multiple known HID query packets for different Arctis generations.
+    /// Returns (gameVolume, chatVolume) in range 0-100, or nil if all queries fail.
+    public func queryChatMixPosition() -> (gameVolume: Int, chatVolume: Int)? {
+        guard let device = device else {
+            print("⚠️  No device available for query")
+            return nil
+        }
+        
+        // Try Arctis 7/Pro query packet: [0x06, 0x24]
+        // Response: 8 bytes, game at byte 2, chat at byte 3, range 191-255
+        if let result = tryArctis7Query(device) {
+            print("✅ ChatMix position from Arctis 7 query: game=\(result.gameVolume) chat=\(result.chatVolume)")
+            return result
+        }
+        
+        // Try Arctis 9 query packet: [0x00, 0x20]
+        // Response: 12 bytes, game at byte 9, chat at byte 10, range 0-19
+        if let result = tryArctis9Query(device) {
+            print("✅ ChatMix position from Arctis 9 query: game=\(result.gameVolume) chat=\(result.chatVolume)")
+            return result
+        }
+        
+        // Try Nova 7/7X query packet: [0x00, 0x10]
+        // Response: 6 bytes, game at byte 4, chat at byte 5, range 0-100
+        if let result = tryNova7Query(device) {
+            print("✅ ChatMix position from Nova 7 query: game=\(result.gameVolume) chat=\(result.chatVolume)")
+            return result
+        }
+        
+        // Try Nova 5 query packet: [0x00, 0x10]
+        // Response: 7 bytes, game at byte 5, chat at byte 6, range 0-100
+        if let result = tryNova5Query(device) {
+            print("✅ ChatMix position from Nova 5 query: game=\(result.gameVolume) chat=\(result.chatVolume)")
+            return result
+        }
+        
+        print("⚠️  All ChatMix query attempts failed — using default volumes (100/100)")
+        return nil
+    }
+    
+    /// Send a feature report query and wait for the input report response.
+    /// Returns the response data if successful, nil on timeout/failure.
+    private func sendQueryAndWait(_ device: IOHIDDevice, featureReport: [UInt8], featureReportID: UInt8, expectedInputReportID: UInt8, responseLength: Int, timeout: TimeInterval = 2.0) -> [UInt8]? {
+        // Reset state
+        lastReportData = []
+        isWaitingForQuery = true
+        
+        // Send feature report query
+        var featureReportData = featureReport
+        let featureResult = IOHIDDeviceSetReport(device,
+                                                 kIOHIDReportTypeFeature,
+                                                 Int(featureReportID),
+                                                 &featureReportData,
+                                                 featureReport.count)
+        guard featureResult == kIOReturnSuccess else {
+            print("   Feature report send failed: \(featureResult)")
+            return nil
+        }
+        
+        // Wait for input report response
+        let waitResult = querySemaphore.wait(timeout: .now() + timeout)
+        
+        guard waitResult == .success, !lastReportData.isEmpty else {
+            print("   Query timeout or no response received")
+            return nil
+        }
+        
+        return lastReportData
+    }
+    
+    private func tryArctis7Query(_ device: IOHIDDevice) -> (gameVolume: Int, chatVolume: Int)? {
+        // Query: [0x06, 0x24] — feature report ID 0x24
+        guard let response = sendQueryAndWait(device,
+                                              featureReport: [0x06, 0x24],
+                                              featureReportID: 0x24,
+                                              expectedInputReportID: 0x45,
+                                              responseLength: 8) else {
+            return nil
+        }
+        
+        guard response.count >= 4 else { return nil }
+        
+        let gameRaw = Int(response[2])
+        let chatRaw = Int(response[3])
+        
+        // Values range 191-255, 255 = neutral (center)
+        let gameVol = (gameRaw == 0) ? 100 : Int(mapValue(gameRaw, fromMin: 191, fromMax: 255, toMin: 0, toMax: 100))
+        let chatVol = (chatRaw == 0) ? 100 : Int(mapValue(chatRaw, fromMin: 191, fromMax: 255, toMin: 0, toMax: 100))
+        
+        return (gameVol, chatVol)
+    }
+    
+    private func tryArctis9Query(_ device: IOHIDDevice) -> (gameVolume: Int, chatVolume: Int)? {
+        // Query: [0x00, 0x20] — feature report ID 0x20
+        guard let response = sendQueryAndWait(device,
+                                              featureReport: [0x00, 0x20],
+                                              featureReportID: 0x20,
+                                              expectedInputReportID: 0x01,
+                                              responseLength: 12) else {
+            return nil
+        }
+        
+        guard response.count >= 11 else { return nil }
+        
+        let gameRaw = Int(response[9])
+        let chatRaw = Int(response[10])
+        
+        // Values range 0-19
+        let gameVol = Int(mapValue(gameRaw, fromMin: 0, fromMax: 19, toMin: 0, toMax: 100))
+        let chatVol = Int(mapValue(chatRaw, fromMin: 0, fromMax: 19, toMin: 0, toMax: 100))
+        
+        return (gameVol, chatVol)
+    }
+    
+    private func tryNova7Query(_ device: IOHIDDevice) -> (gameVolume: Int, chatVolume: Int)? {
+        // Query: [0x00, 0x10] — feature report ID 0x10
+        guard let response = sendQueryAndWait(device,
+                                              featureReport: [0x00, 0x10],
+                                              featureReportID: 0x10,
+                                              expectedInputReportID: 0x01,
+                                              responseLength: 6) else {
+            return nil
+        }
+        
+        guard response.count >= 6 else { return nil }
+        
+        let gameRaw = Int(response[4])
+        let chatRaw = Int(response[5])
+        
+        // Values range 0-100
+        return (gameRaw, chatRaw)
+    }
+    
+    private func tryNova5Query(_ device: IOHIDDevice) -> (gameVolume: Int, chatVolume: Int)? {
+        // Query: [0x00, 0x10] — feature report ID 0x10
+        guard let response = sendQueryAndWait(device,
+                                              featureReport: [0x00, 0x10],
+                                              featureReportID: 0x10,
+                                              expectedInputReportID: 0x01,
+                                              responseLength: 7) else {
+            return nil
+        }
+        
+        guard response.count >= 7 else { return nil }
+        
+        let gameRaw = Int(response[5])
+        let chatRaw = Int(response[6])
+        
+        // Values range 0-100
+        return (gameRaw, chatRaw)
+    }
+    
+    private func mapValue(_ value: Int, fromMin: Int, fromMax: Int, toMin: Int, toMax: Int) -> Int {
+        guard fromMin != fromMax else { return toMin }
+        let ratio = Double(value - fromMin) / Double(fromMax - fromMin)
+        return toMin + Int(ratio * Double(toMax - toMin))
+    }
+    
     // MARK: - Input Handling
     
     private func handleInputValue(_ value: IOHIDValue) {
@@ -235,13 +436,23 @@ public class HIDController {
         let dataLength = IOHIDValueGetLength(value)
         let dataPtr = IOHIDValueGetBytePtr(value)
         
-        guard dataLength >= 3 else { 
+        guard dataLength >= 3 else {
             print("HID report too short: \(dataLength) bytes")
-            return 
+            return
         }
         
         // Report format: [0x45, game_volume, chat_volume]
         let reportID = dataPtr[0]
+        
+        // Check if we're waiting for a query response
+        if isWaitingForQuery {
+            // Copy the report data and signal the semaphore
+            let reportData = [UInt8](UnsafeBufferPointer(start: dataPtr, count: dataLength))
+            lastReportData = reportData
+            isWaitingForQuery = false
+            querySemaphore.signal()
+            return
+        }
         
         if reportID == 0x45 {
             let gameVolume = Int(dataPtr[1])  // 0-100

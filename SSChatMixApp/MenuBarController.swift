@@ -776,6 +776,27 @@ class MenuBarController: NSObject, NSApplicationDelegate, ObservableObject {
             try hidController?.start()
             print("HID controller started")
             
+            // Query dongle for current ChatMix dial position
+            print("Querying dongle for ChatMix dial position...")
+            if let chatMixPosition = hidController?.queryChatMixPosition() {
+                let gameVol = chatMixPosition.gameVolume
+                let chatVol = chatMixPosition.chatVolume
+                
+                // Apply volumes to audio router
+                self.audioRouter?.updateVolumes(game: Float(gameVol), chat: Float(chatVol))
+                
+                // Update UI
+                self.gameVolume = gameVol
+                self.chatVolume = chatVol
+                
+                print("   Restored ChatMix position: game=\(gameVol) chat=\(chatVol)")
+            } else {
+                // Query failed — use defaults (100/100 = center)
+                print("   Query failed — using default volumes (100/100)")
+                self.gameVolume = 100
+                self.chatVolume = 100
+            }
+            
             // Start audio routing with shared memory
             print("Starting audio router (shared memory mode)...")
             let router = AudioRouter(
